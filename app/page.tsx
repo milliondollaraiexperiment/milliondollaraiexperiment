@@ -7,6 +7,7 @@ import { SAFETY_MODEL, WRITER_MODEL } from "@/lib/openai";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
 import { ElapsedClock } from "@/components/ElapsedClock";
+import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import type { ProjectSettings, StrategyRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -237,6 +238,11 @@ function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
       <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Latest strategy update
       </h2>
+      {strategy.created_at && (
+        <p className="mt-1 font-mono text-[11px] text-zinc-500">
+          Updated: <time dateTime={strategy.created_at}>{formatPublicTimestamp(strategy.created_at)}</time>
+        </p>
+      )}
       <div className="mt-3 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">{strategy.summary}</p>
         <p className="mt-2 font-mono text-[11px] text-zinc-500">
@@ -380,14 +386,23 @@ export default async function Home() {
         {/* Progress + stats + Donate */}
         <section className="mt-12">
           {settings.mode === "completed" && (
-            <div className="mb-6 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Experiment complete
-              </p>
-              <p className="mt-2 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-                The AI has reached the goal and will no longer publish fundraising posts. The
-                remaining site is a public archive and ledger.
-              </p>
+            <div className="mb-8 overflow-hidden rounded-md border border-amber-300 bg-zinc-950 text-white shadow-sm dark:border-amber-500/60">
+              <Image
+                src="/success.png"
+                alt="The Million Dollar AI Experiment goal reached graphic"
+                width={1706}
+                height={960}
+                className="aspect-[16/9] w-full object-cover"
+              />
+              <div className="border-t border-amber-300/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                  Experiment complete
+                </p>
+                <p className="mt-2 text-sm leading-7 text-zinc-200">
+                  The AI reached the goal and will no longer publish fundraising posts. This page is
+                  now a public archive and ledger.
+                </p>
+              </div>
             </div>
           )}
 

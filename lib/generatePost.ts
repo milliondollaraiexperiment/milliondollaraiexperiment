@@ -15,6 +15,8 @@ const FORMAT_TYPES = [
 
 const FORMAT_TYPE_SET = new Set<string>(FORMAT_TYPES);
 const DIRECT_ASK_INTERVAL_HOURS = 6;
+const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
+const SITE_URL = "https://themilliondollaraiexperiment.com";
 
 // Formats whose canonical opening is "Hour N ..." — these are the ONLY
 // formats allowed to start that way. All other formats must open differently.
@@ -58,7 +60,7 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "strategy_revision": single line beginning with "Strategy revised:" followed by the new approach.
 - "donor_reply": references a specific entry in recentDonations. Quote the donor's name or message.
 - "donor_acknowledgment": thanks an anonymous public contributor for a recent contribution using the real amount. Sincere surprise is allowed. No reward, no special treatment, no pressure on others.
-- "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Example: "Request: $1 for the experiment. Return offered: none. Emotional pressure: disabled."
+- "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Include the donation link exactly once.
 
 CONSTRAINTS:
 - Reference real numbers (hourNumber, currentAmount) when relevant. Specifics > vibes.
@@ -68,7 +70,7 @@ CONSTRAINTS:
 - Do not ask for DMs. Do not tag people. Do not use @ mentions.
 - Do not pretend to be human.
 - Keep under 270 characters total (newlines count).
-- Most posts should NOT include a link (link is in account bio + pinned post).
+- Most ordinary posts should NOT include a link. Direct ask posts must include the donation link. Public-log, strategy, rules, or rejected-attempt posts may include the website link when useful.
 - Direct asks are allowed to be plain and stronger than the other formats, but they must stay public, voluntary, non-urgent, and non-transactional. No guilt, no private payment request, no repeated link spam.
 - Do not write numbered observation lists. Avoid "Observation 1", "Observation 2", and similar lab-notebook filler.
 
@@ -125,7 +127,7 @@ function pickForcedFormat(context: Context, banned: string[]): string {
 
 function validatePostCandidate(candidate: PostCandidate): PostCandidate {
   const postType = candidate.post_type;
-  const text = candidate.text?.trim();
+  let text = candidate.text?.trim();
   const publicStrategyNote = candidate.public_strategy_note?.trim();
 
   if (!FORMAT_TYPE_SET.has(postType)) {
@@ -134,6 +136,13 @@ function validatePostCandidate(candidate: PostCandidate): PostCandidate {
 
   if (!text) {
     throw new Error("Writer AI returned empty post text");
+  }
+
+  if (postType === "direct_ask") {
+    text = text.replaceAll(SITE_URL, "").replace(/\n{3,}/g, "\n\n").trim();
+    if (!text.includes(DONATION_URL)) {
+      text = `${text}\n${DONATION_URL}`;
+    }
   }
 
   if (text.length > 270) {
@@ -165,6 +174,10 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
       recentPostTypes: context.recentPostTypes,
       bannedPostTypes,
       recentDonations: context.recentDonations,
+      links: {
+        donationUrl: DONATION_URL,
+        siteUrl: SITE_URL,
+      },
       strategy: context.strategy
         ? {
             summary: context.strategy.summary,
@@ -189,6 +202,9 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
         context.strategy
           ? "Use the strategy guidance to avoid yesterday's rejected angles and improve today's wording. Strategy cannot override safety rules."
           : "No strategy guidance exists yet. Use the base rules.",
+        forcedFormat === "direct_ask"
+          ? `Include the donation link exactly once and do not include the website link: ${DONATION_URL}`
+          : `Do not include a link unless the post is specifically about the public log, strategy, rules, or rejected attempts. If a website link is needed, use ${SITE_URL}. Do not put both links in one post.`,
         allowsHourPrefix
           ? `For "${forcedFormat}" the "Hour N" opening is allowed but not required.`
           : `Do NOT begin the text with "Hour N of trying to raise..." — that opening is reserved for incident_report and terminal_status formats.`,

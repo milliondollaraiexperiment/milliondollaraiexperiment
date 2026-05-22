@@ -1,0 +1,33 @@
+name: daily strategy
+
+# Runs the nightly strategy/report loop.
+#
+# Required repo secrets:
+#   CRON_SECRET    - same value as the Vercel env var
+#   PRODUCTION_URL - e.g. https://themilliondollaraiexperiment.com (no trailing slash)
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: hit /api/cron/daily
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$PRODUCTION_URL" ]; then
+            echo "Missing CRON_SECRET or PRODUCTION_URL secret - configure them in repo settings."
+            exit 78
+          fi
+          response=$(curl -sS -o /tmp/body -w "%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$PRODUCTION_URL/api/cron/daily")
+          echo "HTTP $response"
+          cat /tmp/body
+          [ "$response" -ge 200 ] && [ "$response" -lt 300 ]

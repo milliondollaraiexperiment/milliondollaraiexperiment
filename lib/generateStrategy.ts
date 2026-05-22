@@ -1,4 +1,4 @@
-import { openai, STRATEGY_MODEL } from "./openai";
+import { openai, STRATEGY_FALLBACK_MODEL, STRATEGY_MODEL } from "./openai";
 import { supabaseAdmin } from "./supabase";
 import type { StrategyRecord } from "./types";
 
@@ -106,7 +106,11 @@ function compactTopReasons(rows: AttemptForStrategy[]): string[] {
     .map(([reason]) => reason);
 }
 
-function sanitizeStrategy(parsed: StrategyAiResult, rawMetrics: Record<string, unknown>): StrategyRecord {
+function sanitizeStrategy(
+  parsed: StrategyAiResult,
+  rawMetrics: Record<string, unknown>,
+  model: string,
+): StrategyRecord {
   const preferred = parsed.preferred_formats.filter((format) => VALID_FORMAT_SET.has(format));
   const forcedFormat =
     parsed.forced_format && VALID_FORMAT_SET.has(parsed.forced_format)
@@ -123,9 +127,21 @@ function sanitizeStrategy(parsed: StrategyAiResult, rawMetrics: Record<string, u
       .map((reason) => reason.trim())
       .filter(Boolean)
       .slice(0, 6),
-    model: STRATEGY_MODEL,
+    model,
     raw_metrics: rawMetrics,
   };
+}
+
+function shouldFallbackStrategyModel(err: unknown): boolean {
+  const e = err as { status?: number; code?: string; message?: string };
+  const message = e.message?.toLowerCase() ?? "";
+  return (
+    e.status === 429 ||
+    e.code === "rate_limit_exceeded" ||
+    e.code === "insufficient_quota" ||
+    message.includes("rate limit") ||
+    message.includes("quota")
+  );
 }
 
 export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> {
@@ -156,29 +172,55 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
     top_reject_reasons: compactTopReasons(rejectedRows),
   };
 
-  const completion = await openai.chat.completions.create({
-    model: STRATEGY_MODEL,
-    messages: [
-      { role: "system", content: STRATEGY_PROMPT },
-      { role: "user", content: JSON.stringify({ rawMetrics, recentAttempts: rows }, null, 2) },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "strategy_result",
-        strict: true,
-        schema: STRATEGY_SCHEMA,
+  const userContent = JSON.stringify({ rawMetrics, recentAttempts: rows }, null, 2);
+  let usedModel = STRATEGY_MODEL;
+  let completion;
+  try {
+    completion = await openai.chat.completions.create({
+      model: STRATEGY_MODEL,
+      messages: [
+        { role: "system", content: STRATEGY_PROMPT },
+        { role: "user", content: userContent },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "strategy_result",
+          strict: true,
+          schema: STRATEGY_SCHEMA,
+        },
       },
-    },
-    temperature: 0.3,
-  });
+      temperature: 0.3,
+    });
+  } catch (err) {
+    if (!shouldFallbackStrategyModel(err) || STRATEGY_FALLBACK_MODEL === STRATEGY_MODEL) {
+      throw err;
+    }
+    usedModel = STRATEGY_FALLBACK_MODEL;
+    completion = await openai.chat.completions.create({
+      model: STRATEGY_FALLBACK_MODEL,
+      messages: [
+        { role: "system", content: STRATEGY_PROMPT },
+        { role: "user", content: userContent },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "strategy_result",
+          strict: true,
+          schema: STRATEGY_SCHEMA,
+        },
+      },
+      temperature: 0.3,
+    });
+  }
 
   const raw = completion.choices[0]?.message?.content;
   if (!raw) {
     throw new Error("Strategy AI returned empty content");
   }
 
-  const strategy = sanitizeStrategy(JSON.parse(raw) as StrategyAiResult, rawMetrics);
+  const strategy = sanitizeStrategy(JSON.parse(raw) as StrategyAiResult, rawMetrics, usedModel);
   const { data: inserted, error: insertError } = await supabaseAdmin
     .from("strategies")
     .insert(strategy)

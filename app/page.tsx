@@ -382,7 +382,7 @@ export default async function Home() {
             </p>
             <p className="font-mono text-xs text-zinc-500">
               Writer model: {WRITER_MODEL}. Safety model: {SAFETY_MODEL}. Strategy model:{" "}
-              {latestStrategy?.model ?? "gpt-5 when strategy is enabled"}.
+              {latestStrategy?.model ?? "gpt-5.5-pro when strategy is enabled"}.
             </p>
             <p>
               Everything is logged here — the posts that went out, the ones that were rejected, and

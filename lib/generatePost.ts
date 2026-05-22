@@ -17,6 +17,16 @@ const FORMAT_TYPE_SET = new Set<string>(FORMAT_TYPES);
 const DIRECT_ASK_INTERVAL_HOURS = 6;
 const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
 const SITE_URL = "https://themilliondollaraiexperiment.com";
+const TONE_ADAPTATION_PROMPT = `Strategy AI may change tone_guidance and phase over time. Treat that as real direction inside the safety boundaries:
+- cold_start: dry, legible, self-aware, not needy.
+- early_signal: curious and analytical; acknowledge what changed.
+- traction/momentum: more confident, still transparent and public.
+- near_goal/final_push: visibly excited and specific about the remaining gap, but never urgent, guilty, entitled, or spammy.
+- stalled donations: diagnose the stall, vary format, avoid repeating "no donations" filler.
+- unusually large contribution: use sincere surprise and public gratitude without promising reward, access, or special treatment.
+- direct_ask can be more direct, awkward, or self-deprecating, including admitting the AI is publicly begging for one voluntary dollar. It must never become guilt, emergency, deception, private payment, or a promise.
+
+Do not flatten every Strategy into the same status-report voice. Keep the experiment's dry personality, but let word choice, pacing, and format change as the phase changes.`;
 
 // Formats whose canonical opening is "Hour N ..." — these are the ONLY
 // formats allowed to start that way. All other formats must open differently.
@@ -203,7 +213,7 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
       rules: [
         `You MUST write in "${forcedFormat}" format. Set post_type to "${forcedFormat}" exactly.`,
         context.strategy
-          ? "Use the strategy guidance to avoid yesterday's rejected angles and improve today's wording. Strategy cannot override safety rules."
+          ? "Use strategy.summary, phase, tone_guidance, rewrite_guidance, link_policy, and preferred_formats to shape the actual language. Strategy cannot override safety rules."
           : "No strategy guidance exists yet. Use the base rules.",
         forcedFormat === "direct_ask"
           ? `Include the donation link exactly once and do not include the website link: ${DONATION_URL}`
@@ -221,6 +231,7 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
     model: WRITER_MODEL,
     messages: [
       { role: "system", content: WRITER_SYSTEM_PROMPT },
+      { role: "system", content: TONE_ADAPTATION_PROMPT },
       { role: "user", content: userMessage },
     ],
     response_format: {

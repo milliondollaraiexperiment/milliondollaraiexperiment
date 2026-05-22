@@ -141,6 +141,7 @@ Rules:
 - Prefer formats that cleared checks or looked less repetitive.
 - Use rejection reasons to avoid unsafe or boring angles.
 - Direct asks are allowed, but must remain voluntary, public, non-urgent, and non-transactional.
+- Explore genuinely different safe approaches over time: dry logs, direct asks, self-deprecating public begging, donor acknowledgments, strategy revisions, mini-threads, and public failure analysis. Do not let the Writer collapse into one fixed tone.
 - Recommend target_posts_today from 2 to 8. Use fewer posts when recent output was repetitive or rejected; use more when formats cleared checks.
 - Recommend posting_windows_utc as 1-4 UTC time windows in HH:MM-HH:MM format. Cross-midnight windows are allowed, e.g. "22:00-02:00".
 - Use recent created_at timestamps, clears, rejections, and donations to choose windows. If data is thin, favor U.S. waking/early-evening hours in UTC, not overnight-only posting.

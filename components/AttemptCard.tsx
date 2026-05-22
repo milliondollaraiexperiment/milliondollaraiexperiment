@@ -47,9 +47,9 @@ export function AttemptCard({
   const textClamp = truncate ? "line-clamp-3" : "";
 
   return (
-    <article className="rounded-md border border-zinc-300 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+    <article className="min-w-0 overflow-hidden rounded-md border border-zinc-300 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <header className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-zinc-500">
+        <div className="min-w-0 break-words [overflow-wrap:anywhere] flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-zinc-500">
           <span>{hour_number != null ? `Hour ${hour_number}` : "-"}</span>
           <span>/</span>
           <time dateTime={created_at}>{formatPublicTimestamp(created_at)}</time>
@@ -61,7 +61,7 @@ export function AttemptCard({
 
       {text ? (
         <p
-          className={`whitespace-pre-wrap font-mono text-sm leading-6 ${textClamp} ${
+          className={`whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-sm leading-6 ${textClamp} ${
             muted ? "text-zinc-500" : "text-zinc-900 dark:text-zinc-100"
           }`}
         >
@@ -78,7 +78,7 @@ export function AttemptCard({
           {(safety_reasons ?? []).slice(0, 2).map((reason, i) => (
             <span
               key={`s-${i}`}
-              className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"
+              className="max-w-full break-words rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 [overflow-wrap:anywhere] dark:bg-rose-950/50 dark:text-rose-400"
             >
               {reason}
             </span>
@@ -92,7 +92,7 @@ export function AttemptCard({
             </span>
           )}
           {hard_block_reason && (
-            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
+            <span className="max-w-full break-words rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 [overflow-wrap:anywhere] dark:bg-amber-950/50 dark:text-amber-400">
               hardBlock: {hard_block_reason}
             </span>
           )}

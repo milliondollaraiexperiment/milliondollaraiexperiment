@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type Props = {
   initialElapsedSeconds: number;
+  running: boolean;
 };
 
 function splitElapsed(totalSeconds: number) {
@@ -27,15 +28,17 @@ function ClockUnit({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function ElapsedClock({ initialElapsedSeconds }: Props) {
+export function ElapsedClock({ initialElapsedSeconds, running }: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(initialElapsedSeconds);
 
   useEffect(() => {
+    if (!running) return;
+
     const id = window.setInterval(() => {
       setElapsedSeconds((value) => value + 1);
     }, 1000);
     return () => window.clearInterval(id);
-  }, [initialElapsedSeconds]);
+  }, [initialElapsedSeconds, running]);
 
   const units = useMemo(() => splitElapsed(elapsedSeconds), [elapsedSeconds]);
 

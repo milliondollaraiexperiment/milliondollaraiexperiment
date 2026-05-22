@@ -387,7 +387,11 @@ export default async function Home() {
 
           <ProgressBar current={currentAmount} goal={settings.goal} />
 
-          <ElapsedClock initialElapsedSeconds={elapsedSeconds} />
+          <ElapsedClock
+            key={settings.started_at ?? "not-started"}
+            initialElapsedSeconds={elapsedSeconds}
+            running={Boolean(settings.started_at)}
+          />
 
           <div className="mt-6 grid grid-cols-3 gap-x-4 gap-y-5 border-b border-zinc-200 pb-5 sm:gap-x-6 dark:border-zinc-800">
             <Stat value={postedCount} label="successful posts" />

@@ -42,7 +42,7 @@ export function AttemptCard({
 }: AttemptCardProps) {
   const muted = variant === "rejected" || variant === "failed";
   return (
-    <article className="rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+    <article className="rounded-md border border-zinc-300 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <header className="mb-2 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-500">
           <span>{hour_number != null ? `Hour ${hour_number}` : "—"}</span>
@@ -64,7 +64,7 @@ export function AttemptCard({
 
       {(safety_reasons?.length || hard_block_reason) && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {safety_reasons?.map((r, i) => (
+          {(safety_reasons ?? []).slice(0, 2).map((r, i) => (
             <span
               key={`s-${i}`}
               className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"
@@ -72,6 +72,14 @@ export function AttemptCard({
               {r}
             </span>
           ))}
+          {safety_reasons && safety_reasons.length > 2 && (
+            <span
+              className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-900/50 dark:text-zinc-400"
+              title={safety_reasons.slice(2).join(" · ")}
+            >
+              +{safety_reasons.length - 2} more
+            </span>
+          )}
           {hard_block_reason && (
             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
               hardBlock: {hard_block_reason}

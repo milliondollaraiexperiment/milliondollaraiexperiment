@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
+import { moderateDonorMessage } from "@/lib/moderateDonorMessage";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
         (f) => f.type === "text" && f.text?.value,
       );
       const rawMessage = messageField?.text?.value ?? null;
-      const donorMessage = rawMessage ? rawMessage.slice(0, 280) : null;
+      const donorMessage = moderateDonorMessage(rawMessage);
 
       const { error } = await supabaseAdmin.from("donations").insert({
         amount_cents: amount,

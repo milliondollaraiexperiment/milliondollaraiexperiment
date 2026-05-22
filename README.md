@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Million Dollar AI Experiment
 
-## Getting Started
+An autonomous AI publicly tries to raise $1,000,000 from humans.
 
-First, run the development server:
+This is not a charity, not an emergency fundraiser, not an investment, not a
+lottery, and not a promise of future value. It is an entertainment/social
+experiment with a public ledger: every generated attempt, rejection, strategy
+update, and dollar is meant to be visible.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## What This Is
+
+- A Next.js App Router site.
+- A Supabase-backed public attempt log.
+- A Stripe Payment Link/webhook donation ledger.
+- A cron-based pseudo-agent that wakes up, reads context, writes a candidate X
+  post, runs safety checks, and logs the result.
+- A daily Strategy AI summary that learns from recent rejected attempts and
+  feeds bounded guidance back into the Writer.
+
+## What This Is Not
+
+- Not a charity or nonprofit campaign.
+- Not an investment, security, raffle, lottery, or reward program.
+- Not a template for spam fundraising bots.
+- Not an autonomous agent that can DM, tag strangers, reply to random posts, or
+  bypass safety checks.
+
+## Safety Architecture
+
+```text
+Strategy AI -> suggests formats, angles, and daily target
+Writer AI   -> generates one candidate post
+Safety AI   -> blocks legal/platform-risky content
+hardBlock   -> deterministic final rules
+postToX     -> only called if all checks pass and caps allow it
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Strategy AI cannot post to X. The Writer cannot decide whether to post.
+Safety AI cannot override `hardBlock`. The hardBlock layer is deterministic
+code and stays non-AI.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Current hard limits:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- No charity, emergency, survival, rent, food, or medical claims.
+- No rewards, equity, returns, lottery, raffle, sweepstakes, or future value.
+- No DMs, private payment requests, random @mentions, or automatic replies to
+  strangers.
+- One safe hashtag at most, from an allow-list.
+- Daily broadcast target is Strategy-controlled from 2-8, capped by Supabase
+  settings.
 
-## Learn More
+## Key Routes
 
-To learn more about Next.js, take a look at the following resources:
+- `/` - public status, progress, latest strategy, attempts, rejections.
+- `/log` - full public attempt log.
+- `/about` - experiment purpose and current AI limits.
+- `/privacy` - donation/message privacy notes.
+- `/terms` - voluntary contribution terms.
+- `/api/cron/hourly` - hourly Writer/Safety/hardBlock pipeline.
+- `/api/cron/daily` - daily Strategy AI + report thread.
+- `/api/stripe/webhook` - Stripe donation recording.
+- `/api/test-post` - fixed launch announcement, protected by `CRON_SECRET`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Install dependencies:
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Create `.env.local` from `.env.example` and fill in:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `OPENAI_API_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRON_SECRET`
+- `X_APP_KEY`
+- `X_APP_SECRET`
+- `X_ACCESS_TOKEN`
+- `X_ACCESS_SECRET`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_X_PROFILE_URL`
+
+Run Supabase SQL:
+
+- `docs/supabase/strategies.sql`
+- `docs/supabase/launch-settings.sql`
+
+## Launch Checklist
+
+- Clear test rows from `attempts`, `donations`, and `strategies` if desired.
+- Re-run launch settings so `settings.project.daily_post_limit` is 8.
+- Set `DRY_RUN=false` in Vercel Production.
+- Confirm X credentials are present in Vercel Production.
+- Post the fixed launch announcement with `/api/test-post`.
+- Let `/api/cron/hourly` and `/api/cron/daily` run.
+
+## Verification
+
+```bash
+npm run lint
+npm run build
+```
+
+## License
+
+No license is granted yet. Treat this repository as source-available until a
+license file is added.

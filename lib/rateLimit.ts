@@ -11,16 +11,21 @@ function startOfTodayUtcIso(): string {
 }
 
 export async function getTodayPostedCount(): Promise<number> {
-  const { count, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("attempts")
-    .select("id", { count: "exact", head: true })
+    .select("post_type,text")
     .eq("status", "posted")
     .gte("created_at", startOfTodayUtcIso());
 
   if (error) {
     throw new Error(`getTodayPostedCount failed: ${error.message}`);
   }
-  return count ?? 0;
+  return (data ?? []).reduce((sum, row) => {
+    if (row.post_type === "daily_report_thread" && row.text) {
+      return sum + row.text.split("\n\n---\n\n").filter(Boolean).length;
+    }
+    return sum + 1;
+  }, 0);
 }
 
 // Read the limit from the settings row so soft launch (2/day) can be changed

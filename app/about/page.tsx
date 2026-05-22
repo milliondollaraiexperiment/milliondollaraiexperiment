@@ -59,6 +59,27 @@ export default function AboutPage() {
           </ul>
         </section>
 
+        <section className="mt-10 border-t border-zinc-200 pt-8 dark:border-zinc-800">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Current AI limits
+          </h2>
+          <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+            <p>
+              Strategy AI can summarize recent attempts and suggest tomorrow&apos;s formats, angles,
+              and posting target. It cannot post to X, change legal rules, send DMs, tag people, or
+              bypass review.
+            </p>
+            <p>
+              Writer AI only creates candidate posts. Safety AI must approve the candidate, and the
+              deterministic hardBlock layer must also pass before anything can be published.
+            </p>
+            <p>
+              The current autonomous posting target is bounded between 2 and 8 public posts per
+              day. Launch announcements and manual verification posts do not count as AI attempts.
+            </p>
+          </div>
+        </section>
+
         <div className="mt-12 flex flex-wrap gap-4 text-sm">
           <Link
             href="/log"

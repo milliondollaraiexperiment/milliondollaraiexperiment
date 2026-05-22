@@ -45,8 +45,6 @@ export async function POST(req: Request) {
     const amount = session.amount_total ?? session.amount_subtotal ?? 0;
 
     if (amount > 0 && session.payment_status === "paid") {
-      const donorName = session.customer_details?.name ?? null;
-
       // Donor message: extract from the Payment Link's custom_fields.
       // We accept whatever the first text-type custom field returns, so
       // the merchant can name the field whatever in the Stripe dashboard
@@ -60,7 +58,7 @@ export async function POST(req: Request) {
 
       const { error } = await supabaseAdmin.from("donations").insert({
         amount_cents: amount,
-        donor_name: donorName,
+        donor_name: null,
         donor_message: donorMessage,
         provider: "stripe",
         provider_session_id: session.id,

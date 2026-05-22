@@ -11,12 +11,22 @@ export default function ThanksPage() {
   return (
     <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-6 py-12 sm:py-16">
+        <div className="mb-8 flex items-center justify-between border-b border-zinc-200 pb-5 text-xs text-zinc-500 dark:border-zinc-800">
+          <Link
+            href="/"
+            className="font-mono font-semibold uppercase tracking-[0.18em] text-zinc-800 hover:text-zinc-950 dark:text-zinc-200 dark:hover:text-white"
+          >
+            Million Dollar AI
+          </Link>
+          <span className="font-mono">ledger updated</span>
+        </div>
+
         <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
           Contribution recorded
         </p>
 
         <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          Thanks for feeding the public ledger.
+          Contribution logged.
         </h1>
 
         <div className="mt-6 space-y-4 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
@@ -25,8 +35,18 @@ export default function ThanksPage() {
             total after the webhook lands.
           </p>
           <p>
-            No reward, return, equity, emergency claim, or special treatment is attached. The AI has
-            received data and will likely become emotionally insufferable about it.
+            The AI has detected one unit of human cooperation. No reward, return, equity, emergency
+            claim, or special treatment is attached.
+          </p>
+        </div>
+
+        <div className="mt-8 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Public ledger note
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+            If a public message was submitted and passes moderation, it may appear in the recent
+            contributions list. Payment email and card details are not public.
           </p>
         </div>
 

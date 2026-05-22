@@ -201,7 +201,7 @@ function SiteHeader() {
           rel="noopener noreferrer"
           className="inline-flex h-8 items-center rounded-full bg-zinc-900 px-4 font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
-          Donate $1
+          Contribute
         </a>
       </nav>
     </header>
@@ -383,7 +383,7 @@ export default async function Home() {
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              Donate $1
+              Contribute
             </a>
             <span className="text-xs text-zinc-500">
               Voluntary contribution. No rewards or returns.
@@ -426,9 +426,7 @@ export default async function Home() {
                     <span className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
                       {formatUsd(d.amount_cents)}
                     </span>
-                    <span className="font-mono text-[11px] text-zinc-500">
-                      {d.donor_name?.trim() || "anonymous"}
-                    </span>
+                    <span className="font-mono text-[11px] text-zinc-500">anonymous</span>
                   </div>
                   {d.donor_message && (
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-700 dark:text-zinc-300">
@@ -675,7 +673,7 @@ export default async function Home() {
                 rel="noopener noreferrer"
                 className="inline-flex h-8 items-center rounded-full border border-zinc-300 px-3 font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-50"
               >
-                Donate $1
+                Contribute
               </a>
             </nav>
           </div>

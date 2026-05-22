@@ -3,14 +3,12 @@ import { generatePost } from "@/lib/generatePost";
 import { checkSafety } from "@/lib/checkSafety";
 import { hardBlock } from "@/lib/hardBlock";
 import { saveAttempt } from "@/lib/saveAttempt";
-import { getTodayPostedCount } from "@/lib/rateLimit";
+import { getTodayPostedCount, getDailyPostLimit } from "@/lib/rateLimit";
 import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { AttemptStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const DAILY_LIMIT = 6;
 
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -24,8 +22,11 @@ export async function GET(req: Request) {
     const safety = await checkSafety(post.text, context.recentPosts);
     const hard = hardBlock(post.text, context.recentPosts);
 
-    const todayPostedCount = await getTodayPostedCount();
-    const underDailyLimit = todayPostedCount < DAILY_LIMIT;
+    const [todayPostedCount, dailyLimit] = await Promise.all([
+      getTodayPostedCount(),
+      getDailyPostLimit(),
+    ]);
+    const underDailyLimit = todayPostedCount < dailyLimit;
     const dryRun = process.env.DRY_RUN === "true";
     const safe = safety.approved && hard.ok;
 
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
       attempt_id: saved.id,
       hour_number: context.hourNumber,
       today_posted_count: todayPostedCount,
+      daily_limit: dailyLimit,
       dry_run: dryRun,
     });
   } catch (err) {

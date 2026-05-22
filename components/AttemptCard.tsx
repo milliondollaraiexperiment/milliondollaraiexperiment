@@ -9,6 +9,11 @@ type AttemptCardProps = {
   hard_block_reason?: string | null;
   public_strategy_note?: string | null;
   error_message?: string | null;
+  /**
+   * When true, clamp the post text to 3 lines. Used on the homepage so
+   * the page stays scannable; /log renders the full text.
+   */
+  truncate?: boolean;
 };
 
 const badgeStyles: Record<Variant, string> = {
@@ -39,8 +44,10 @@ export function AttemptCard({
   hard_block_reason,
   public_strategy_note,
   error_message,
+  truncate = false,
 }: AttemptCardProps) {
   const muted = variant === "rejected" || variant === "failed";
+  const textClamp = truncate ? "line-clamp-3" : "";
   return (
     <article className="rounded-md border border-zinc-300 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
       <header className="mb-2 flex items-center justify-between gap-3">
@@ -55,7 +62,9 @@ export function AttemptCard({
       </header>
 
       {text ? (
-        <p className={`whitespace-pre-wrap font-mono text-sm leading-6 ${muted ? "text-zinc-500" : "text-zinc-900 dark:text-zinc-100"}`}>
+        <p
+          className={`whitespace-pre-wrap font-mono text-sm leading-6 ${textClamp} ${muted ? "text-zinc-500" : "text-zinc-900 dark:text-zinc-100"}`}
+        >
           {text}
         </p>
       ) : (

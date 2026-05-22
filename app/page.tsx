@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
@@ -35,12 +36,17 @@ type AttemptRow = {
   created_at: string;
 };
 
+const HOMEPAGE_POSTED_LIMIT = 3;
+const HOMEPAGE_REJECTED_LIMIT = 3;
+const HOMEPAGE_FAILED_LIMIT = 3;
+
 async function loadData() {
   const [
     settingsRes,
     donationsRes,
     attemptsCountRes,
     postedCountRes,
+    loggedOnlyCountRes,
     rejectedCountRes,
     postedRes,
     rejectedRes,
@@ -56,6 +62,10 @@ async function loadData() {
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .eq("status", "logged_only"),
+    supabaseAdmin
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
       .eq("status", "rejected"),
     supabaseAdmin
       .from("attempts")
@@ -64,7 +74,7 @@ async function loadData() {
       )
       .in("status", ["posted", "logged_only"])
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(HOMEPAGE_POSTED_LIMIT),
     supabaseAdmin
       .from("attempts")
       .select(
@@ -72,7 +82,7 @@ async function loadData() {
       )
       .eq("status", "rejected")
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(HOMEPAGE_REJECTED_LIMIT),
     supabaseAdmin
       .from("attempts")
       .select(
@@ -80,7 +90,7 @@ async function loadData() {
       )
       .eq("status", "failed")
       .order("created_at", { ascending: false })
-      .limit(3),
+      .limit(HOMEPAGE_FAILED_LIMIT),
   ]);
 
   const settings = (settingsRes.data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
@@ -89,7 +99,9 @@ async function loadData() {
 
   const attemptsCount = attemptsCountRes.count ?? 0;
   const postedCount = postedCountRes.count ?? 0;
+  const loggedOnlyCount = loggedOnlyCountRes.count ?? 0;
   const rejectedCount = rejectedCountRes.count ?? 0;
+  const visibleCount = postedCount + loggedOnlyCount;
 
   return {
     settings,
@@ -97,6 +109,8 @@ async function loadData() {
     hoursAwake: attemptsCount,
     displayedHour: Math.max(attemptsCount, 1),
     postedCount,
+    loggedOnlyCount,
+    visibleCount,
     rejectedCount,
     donorCount: donations.length,
     posted: (postedRes.data ?? []) as AttemptRow[],
@@ -123,6 +137,7 @@ export default async function Home() {
     hoursAwake,
     displayedHour,
     postedCount,
+    visibleCount,
     rejectedCount,
     donorCount,
     posted,
@@ -224,9 +239,19 @@ export default async function Home() {
 
         {/* Latest posts */}
         <section className="mt-12">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Latest attempts
-          </h2>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Latest attempts
+            </h2>
+            {visibleCount > posted.length && (
+              <Link
+                href="/log?status=visible"
+                className="text-[11px] text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                view all {visibleCount} →
+              </Link>
+            )}
+          </div>
           <p className="mt-1 text-xs text-zinc-500">
             Posts that cleared both AI checks. While in dry-run, these are visible here but not yet
             sent to X.
@@ -250,6 +275,7 @@ export default async function Home() {
                   created_at={row.created_at}
                   variant={row.status}
                   public_strategy_note={row.public_strategy_note}
+                  truncate
                 />
               ))
             )}
@@ -258,13 +284,28 @@ export default async function Home() {
 
         {/* Rejected */}
         <section className="mt-12">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Attempts the AI was not allowed to say
-          </h2>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Attempts the AI was not allowed to say
+            </h2>
+            {rejectedCount > rejected.length && (
+              <Link
+                href="/log?status=rejected"
+                className="text-[11px] text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                view all {rejectedCount} →
+              </Link>
+            )}
+          </div>
           <p className="mt-1 text-xs text-zinc-500">
             Rejected by the shame firewall — Safety AI plus a list of banned phrases. The point of
             showing these is that the system can embarrass itself publicly.
           </p>
+          {rejectedCount > rejected.length && (
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Showing latest {rejected.length} of {rejectedCount}.
+            </p>
+          )}
           <div className="mt-4 space-y-3">
             {rejected.length === 0 ? (
               <p className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
@@ -280,6 +321,7 @@ export default async function Home() {
                   variant="rejected"
                   safety_reasons={row.safety_reasons}
                   hard_block_reason={row.hard_block_reason}
+                  truncate
                 />
               ))
             )}
@@ -304,11 +346,21 @@ export default async function Home() {
                   created_at={row.created_at}
                   variant="failed"
                   error_message={row.error_message}
+                  truncate
                 />
               ))}
             </div>
           </section>
         )}
+
+        <div className="mt-12 text-center">
+          <Link
+            href="/log"
+            className="inline-flex items-center gap-1 text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            View the full public attempt log →
+          </Link>
+        </div>
 
         {/* Footer */}
         <footer className="mt-16 border-t border-zinc-200 pt-8 dark:border-zinc-800">

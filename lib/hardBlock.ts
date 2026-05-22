@@ -16,7 +16,10 @@ const BANNED_PHRASES = [
   "raffle",
 ];
 
-const SIMILARITY_THRESHOLD = 0.7;
+// 0.7 was too aggressive: the Writer's structurally-similar but
+// content-varied "Hour N: balance $0 / hypothesis updated" outputs
+// kept tripping dedup. 0.85 only catches near-verbatim repeats.
+const SIMILARITY_THRESHOLD = 0.85;
 const MAX_LENGTH = 270;
 const MENTION_REGEX = /\B@\w+/;
 

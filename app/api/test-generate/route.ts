@@ -14,10 +14,11 @@ export async function GET() {
     const hard = hardBlock(post.text, context.recentPosts);
     const finalApproved = safety.approved && hard.ok;
 
+    const status = finalApproved ? "logged_only" : "rejected";
     const record = { context, post, safety, hard, finalApproved };
-    await saveAttempt(record);
+    const saved = await saveAttempt(record, { status });
 
-    return Response.json(record);
+    return Response.json({ ...record, status, attempt_id: saved.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json({ error: message }, { status: 500 });

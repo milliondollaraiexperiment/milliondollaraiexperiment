@@ -25,10 +25,18 @@ export type HardBlockResult = {
   reason: string;
 };
 
+export type AttemptStatus = "posted" | "rejected" | "logged_only" | "failed";
+
 export type AttemptRecord = {
   context: Context;
   post: PostCandidate;
   safety: SafetyResult;
   hard: HardBlockResult;
   finalApproved: boolean;
+};
+
+export type ProjectSettings = {
+  goal: number;
+  daily_post_limit: number;
+  mode: "normal";
 };

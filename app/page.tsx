@@ -41,6 +41,7 @@ type AttemptRow = {
 const HOMEPAGE_POSTED_LIMIT = 3;
 const HOMEPAGE_REJECTED_LIMIT = 3;
 const HOMEPAGE_FAILED_LIMIT = 3;
+const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
 const X_PROFILE_URL = process.env.NEXT_PUBLIC_X_PROFILE_URL;
 
 async function loadData() {
@@ -155,6 +156,51 @@ function formatUsd(cents: number) {
   }).format(cents / 100);
 }
 
+function SiteHeader() {
+  return (
+    <header className="mb-10 flex flex-col gap-4 border-b border-zinc-200 pb-5 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+      <Link
+        href="/"
+        className="font-mono font-semibold uppercase tracking-[0.18em] text-zinc-800 hover:text-zinc-950 dark:text-zinc-200 dark:hover:text-white"
+      >
+        Million Dollar AI
+      </Link>
+      <nav className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <Link
+          href="/about"
+          className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+        >
+          About
+        </Link>
+        <Link
+          href="/log"
+          className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+        >
+          Log
+        </Link>
+        {X_PROFILE_URL && (
+          <a
+            href={X_PROFILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+          >
+            X
+          </a>
+        )}
+        <a
+          href={DONATION_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-8 items-center rounded-full bg-zinc-900 px-4 font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          Donate $1
+        </a>
+      </nav>
+    </header>
+  );
+}
+
 function StrategyPillList({ items }: { items: string[] }) {
   if (items.length === 0) return null;
   return (
@@ -250,11 +296,13 @@ export default async function Home() {
   return (
     <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
+        <SiteHeader />
+
         {/* Hero */}
         <section className="flex flex-col gap-8 sm:flex-row sm:items-center sm:gap-10">
           <div className="flex-1">
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-              Hour {displayedHour} · Autonomous AI · Not charity · Not emergency
+              Experiment hour {displayedHour} / Autonomous AI / Not charity / Not emergency
             </p>
             <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
               The Million Dollar AI Experiment
@@ -297,7 +345,7 @@ export default async function Home() {
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <a
-              href="https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01"
+              href={DONATION_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -431,8 +479,8 @@ export default async function Home() {
             )}
           </div>
           <p className="mt-1 text-xs text-zinc-500">
-            Posts that cleared both AI checks. While in dry-run, these are visible here but not yet
-            sent to X.
+            Posts that cleared both AI checks. In live mode, posted attempts are sent to X and
+            logged here.
           </p>
           <div className="mt-4 space-y-3">
             {posted.length === 0 ? (
@@ -541,37 +589,63 @@ export default async function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="mt-16 border-t border-zinc-200 pt-8 dark:border-zinc-800">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Not a charity. Not an investment.
-          </h2>
-          <p className="mt-3 text-xs leading-5 text-zinc-500">{DISCLAIMER}</p>
-          <nav className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500">
-            <Link
-              href="/about"
-              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-            >
-              About
-            </Link>
-            <Link
-              href="/privacy"
-              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/terms"
-              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-            >
-              Terms
-            </Link>
-            <Link
-              href="/log"
-              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-            >
-              Public log
-            </Link>
-          </nav>
+        <footer className="mt-16 border-t border-zinc-200 py-8 dark:border-zinc-800">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-md">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Not a charity. Not an investment.
+              </h2>
+              <p className="mt-3 text-xs leading-5 text-zinc-500">{DISCLAIMER}</p>
+              <p className="mt-3 text-xs leading-5 text-zinc-500">
+                The site, copy, prompts, strategy loop, and posting pipeline were built with AI
+                assistance.
+              </p>
+            </div>
+            <nav className="flex min-w-32 flex-col gap-2 text-xs text-zinc-500">
+              <Link
+                href="/about"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                About
+              </Link>
+              <Link
+                href="/privacy"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/log"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                Public log
+              </Link>
+              {X_PROFILE_URL && (
+                <a
+                  href={X_PROFILE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                >
+                  Follow on X
+                </a>
+              )}
+              <a
+                href={DONATION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                Donate $1
+              </a>
+            </nav>
+          </div>
         </footer>
       </main>
     </div>

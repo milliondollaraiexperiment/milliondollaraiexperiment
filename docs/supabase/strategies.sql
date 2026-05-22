@@ -9,6 +9,7 @@ create table if not exists strategies (
   banned_angles text[] not null default '{}',
   rewrite_guidance text not null default '',
   top_reject_reasons text[] not null default '{}',
+  target_posts_today int,
   model text,
   raw_metrics jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()

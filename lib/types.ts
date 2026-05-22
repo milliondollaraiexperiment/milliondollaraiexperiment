@@ -29,6 +29,7 @@ export type StrategyRecord = {
   banned_angles: string[];
   rewrite_guidance: string;
   top_reject_reasons: string[];
+  target_posts_today: number | null;
   model: string | null;
   raw_metrics?: Record<string, unknown>;
   created_at?: string;

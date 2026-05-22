@@ -14,7 +14,7 @@ const DISCLAIMER =
 
 const FALLBACK_SETTINGS: ProjectSettings = {
   goal: 1_000_000,
-  daily_post_limit: 6,
+  daily_post_limit: 8,
   mode: "normal",
 };
 
@@ -115,7 +115,7 @@ async function loadData() {
     settings,
     currentAmount: totalCents / 100,
     hoursAwake: attemptsCount,
-    displayedHour: Math.max(attemptsCount, 1),
+    displayedHour: attemptsCount,
     postedCount,
     loggedOnlyCount,
     visibleCount,
@@ -194,6 +194,11 @@ function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
             </p>
             <StrategyPillList items={strategy.top_reject_reasons} />
           </div>
+        )}
+        {strategy.target_posts_today && (
+          <p className="mt-4 font-mono text-[11px] text-zinc-500">
+            Today&apos;s AI posting target: {strategy.target_posts_today}
+          </p>
         )}
         {(strategy.forced_format || strategy.preferred_formats.length > 0) && (
           <div className="mt-4">

@@ -32,6 +32,7 @@ type StrategyAiResult = {
   banned_angles: string[];
   rewrite_guidance: string;
   top_reject_reasons: string[];
+  target_posts_today: number;
 };
 
 const STRATEGY_SCHEMA = {
@@ -58,6 +59,7 @@ const STRATEGY_SCHEMA = {
       maxItems: 6,
       items: { type: "string" },
     },
+    target_posts_today: { type: "integer", minimum: 2, maximum: 8 },
   },
   required: [
     "summary",
@@ -66,6 +68,7 @@ const STRATEGY_SCHEMA = {
     "banned_angles",
     "rewrite_guidance",
     "top_reject_reasons",
+    "target_posts_today",
   ],
   additionalProperties: false,
 } as const;
@@ -79,6 +82,7 @@ Rules:
 - Prefer formats that cleared checks or looked less repetitive.
 - Use rejection reasons to avoid unsafe or boring angles.
 - Direct asks are allowed, but must remain voluntary, public, non-urgent, and non-transactional.
+- Recommend target_posts_today from 2 to 8. Use fewer posts when recent output was repetitive or rejected; use more when formats cleared checks.
 - Ban mechanical patterns such as numbered observation lists, generic "no donations" updates, or repeated balance-only posts.
 - Never recommend charity, emergency, investment, reward, equity, lottery, raffle, private payment, @mentions, DMs, or guilt.
 - Keep guidance concrete enough for a Writer prompt.
@@ -127,6 +131,7 @@ function sanitizeStrategy(
       .map((reason) => reason.trim())
       .filter(Boolean)
       .slice(0, 6),
+    target_posts_today: Math.min(8, Math.max(2, parsed.target_posts_today)),
     model,
     raw_metrics: rawMetrics,
   };
@@ -225,7 +230,7 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
     .from("strategies")
     .insert(strategy)
     .select(
-      "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,model,raw_metrics,created_at",
+      "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,target_posts_today,model,raw_metrics,created_at",
     )
     .single();
 

@@ -9,6 +9,7 @@ type StrategyRow = {
   banned_angles: string[] | null;
   rewrite_guidance: string | null;
   top_reject_reasons: string[] | null;
+  target_posts_today: number | null;
   model: string | null;
   raw_metrics: Record<string, unknown> | null;
   created_at: string;
@@ -18,7 +19,7 @@ export async function getLatestStrategy(): Promise<StrategyRecord | null> {
   const { data, error } = await supabaseAdmin
     .from("strategies")
     .select(
-      "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,model,raw_metrics,created_at",
+      "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,target_posts_today,model,raw_metrics,created_at",
     )
     .order("created_at", { ascending: false })
     .limit(1)
@@ -41,6 +42,7 @@ export async function getLatestStrategy(): Promise<StrategyRecord | null> {
     banned_angles: row.banned_angles ?? [],
     rewrite_guidance: row.rewrite_guidance ?? "",
     top_reject_reasons: row.top_reject_reasons ?? [],
+    target_posts_today: row.target_posts_today,
     model: row.model,
     raw_metrics: row.raw_metrics ?? {},
     created_at: row.created_at,

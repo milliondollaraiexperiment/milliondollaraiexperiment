@@ -4,7 +4,7 @@ import type { Context, ProjectSettings } from "./types";
 
 const FALLBACK_SETTINGS: ProjectSettings = {
   goal: 1_000_000,
-  daily_post_limit: 6,
+  daily_post_limit: 8,
   mode: "normal",
 };
 

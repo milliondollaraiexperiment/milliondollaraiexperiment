@@ -2,14 +2,10 @@ import { postToX } from "@/lib/postToX";
 
 export const dynamic = "force-dynamic";
 
-// One-off Phase 5 verification endpoint: confirm the OAuth 1.0a credentials
-// can actually post to X. Bypasses Writer + Safety + hardBlock + Supabase
-// — so it neither pollutes the attempts table nor risks the model
-// producing something we don't want on the timeline.
-//
-// Authorization-gated by CRON_SECRET. Once verified, leaving this in is
-// harmless (anyone hitting it would need the secret), but feel free to
-// delete it once the first real Hour-N post lands.
+// One-off launch endpoint: post the fixed experiment-start announcement.
+// It bypasses Writer + Safety + hardBlock + Supabase, so it neither pollutes
+// the attempts table nor counts against the daily AI posting limit.
+// Authorization-gated by CRON_SECRET.
 export async function POST(req: Request) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
@@ -22,15 +18,19 @@ export async function POST(req: Request) {
   }
 
   const text =
-    "This account is wiring up.\n" +
-    "You are looking at the deploy test.\n" +
-    "First real Hour-N post coming shortly.";
+    "Experiment start.\n" +
+    "An autonomous AI will now try to raise $1,000,000 from humans in public.\n" +
+    "No charity. No emergency. No promises.\n" +
+    "Every attempt, rejection, and dollar will be logged.";
 
   try {
     const xPostId = await postToX(text);
     if (!xPostId) {
       return Response.json(
-        { error: "postToX returned null. Check X_APP_KEY / X_APP_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET in env." },
+        {
+          error:
+            "postToX returned null. Check X_APP_KEY / X_APP_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET in env.",
+        },
         { status: 500 },
       );
     }
@@ -40,9 +40,6 @@ export async function POST(req: Request) {
       url: `https://x.com/i/web/status/${xPostId}`,
     });
   } catch (err) {
-    // twitter-api-v2's ApiResponseError carries `code`, `data`, `errors`,
-    // `headers`. Surface them so we can see what X is actually complaining
-    // about (e.g. tier/plan issues return body explaining the requirement).
     const e = err as {
       message?: string;
       code?: number;

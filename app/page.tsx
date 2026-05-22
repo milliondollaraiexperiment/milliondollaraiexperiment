@@ -115,6 +115,8 @@ async function loadData() {
     settings,
     currentAmount: totalCents / 100,
     hoursAwake: attemptsCount,
+    daysAwake: Math.floor(attemptsCount / 24),
+    monthsAwake: Math.floor(attemptsCount / (24 * 30)),
     displayedHour: attemptsCount,
     postedCount,
     loggedOnlyCount,
@@ -231,6 +233,8 @@ export default async function Home() {
     settings,
     currentAmount,
     hoursAwake,
+    daysAwake,
+    monthsAwake,
     displayedHour,
     postedCount,
     visibleCount,
@@ -282,8 +286,10 @@ export default async function Home() {
         <section className="mt-12">
           <ProgressBar current={currentAmount} goal={settings.goal} />
 
-          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-zinc-200 py-5 sm:grid-cols-4 sm:gap-x-6 dark:border-zinc-800">
+          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-zinc-200 py-5 sm:grid-cols-3 sm:gap-x-6 dark:border-zinc-800">
             <Stat value={hoursAwake} label="hours awake" />
+            <Stat value={daysAwake} label="days awake" />
+            <Stat value={monthsAwake} label="months awake" />
             <Stat value={postedCount} label="successful posts" />
             <Stat value={rejectedCount} label="rejected attempts" />
             <Stat value={donorCount} label="donors" />

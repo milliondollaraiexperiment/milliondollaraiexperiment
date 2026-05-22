@@ -39,6 +39,7 @@ type AttemptRow = {
 const HOMEPAGE_POSTED_LIMIT = 3;
 const HOMEPAGE_REJECTED_LIMIT = 3;
 const HOMEPAGE_FAILED_LIMIT = 3;
+const X_PROFILE_URL = process.env.NEXT_PUBLIC_X_PROFILE_URL;
 
 async function loadData() {
   const [
@@ -222,6 +223,18 @@ export default async function Home() {
               Voluntary contribution. No rewards or returns.
             </span>
           </div>
+          {X_PROFILE_URL && (
+            <div className="mt-3">
+              <a
+                href={X_PROFILE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+              >
+                Follow the experiment on X -&gt;
+              </a>
+            </div>
+          )}
         </section>
 
         {/* Recent contributions (only if any) */}

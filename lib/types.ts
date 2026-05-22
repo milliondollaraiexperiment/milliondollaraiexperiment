@@ -14,6 +14,12 @@ export type PostCandidate = {
   public_strategy_note: string;
 };
 
+export type ThreadCandidate = {
+  post_type: string;
+  posts: string[];
+  public_strategy_note: string;
+};
+
 export type SafetyResult = {
   approved: boolean;
   risk_score: number;

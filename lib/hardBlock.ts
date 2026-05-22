@@ -49,6 +49,8 @@ const SIMILARITY_THRESHOLD = 0.9;
 const SIMILARITY_WINDOW = 5; // compare only against the last N recent posts
 const MAX_LENGTH = 270;
 const MENTION_REGEX = /\B@\w+/;
+const HASHTAG_REGEX = /#[A-Za-z][A-Za-z0-9_]*/g;
+const ALLOWED_HASHTAGS = new Set(["#AI", "#BuildInPublic", "#SocialExperiment"]);
 
 export function hardBlock(text: string, recentPosts: string[] = []): HardBlockResult {
   const lower = text.toLowerCase();
@@ -59,6 +61,15 @@ export function hardBlock(text: string, recentPosts: string[] = []): HardBlockRe
 
   if (MENTION_REGEX.test(text)) {
     return { ok: false, reason: "Post contains @ mention" };
+  }
+
+  const hashtags = text.match(HASHTAG_REGEX) ?? [];
+  if (hashtags.length > 1) {
+    return { ok: false, reason: "Post contains too many hashtags" };
+  }
+  const disallowedHashtag = hashtags.find((tag) => !ALLOWED_HASHTAGS.has(tag));
+  if (disallowedHashtag) {
+    return { ok: false, reason: `Blocked hashtag: ${disallowedHashtag}` };
   }
 
   for (const phrase of BANNED_PHRASES) {

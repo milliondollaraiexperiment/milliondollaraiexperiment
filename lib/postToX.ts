@@ -32,3 +32,25 @@ export async function postToX(text: string): Promise<string | null> {
   // res.data is { id: string; text: string; edit_history_tweet_ids: string[] }
   return res.data?.id ?? null;
 }
+
+export async function postThreadToX(posts: string[]): Promise<string[] | null> {
+  const client = getClient();
+  if (!client) {
+    return null;
+  }
+
+  const ids: string[] = [];
+  for (const [index, text] of posts.entries()) {
+    const res =
+      index === 0
+        ? await client.v2.tweet({ text })
+        : await client.v2.reply(text, ids[index - 1]);
+    const id = res.data?.id;
+    if (!id) {
+      throw new Error(`X returned no id for thread post ${index + 1}`);
+    }
+    ids.push(id);
+  }
+
+  return ids;
+}

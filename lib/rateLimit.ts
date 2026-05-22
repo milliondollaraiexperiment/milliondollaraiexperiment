@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "./supabase";
 import { getLatestStrategy } from "./getLatestStrategy";
+import { SUMMARY_POST_TYPES } from "./summaryTypes";
 import type { ProjectSettings } from "./types";
 
 const DEFAULT_DAILY_LIMIT = 8;
@@ -21,8 +22,8 @@ export async function getTodayPostedCount(): Promise<number> {
     throw new Error(`getTodayPostedCount failed: ${error.message}`);
   }
   return (data ?? []).reduce((sum, row) => {
-    if (row.post_type === "daily_report_thread" && row.text) {
-      return sum + row.text.split("\n\n---\n\n").filter(Boolean).length;
+    if (SUMMARY_POST_TYPES.has(row.post_type ?? "")) {
+      return sum;
     }
     return sum + 1;
   }, 0);

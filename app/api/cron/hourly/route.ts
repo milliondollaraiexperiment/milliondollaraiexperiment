@@ -9,6 +9,12 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
 import { isWithinPostingWindows } from "@/lib/postingWindows";
 import { getCompletionState, markProjectCompleted } from "@/lib/projectState";
+import { autonomousPostingShutdownReason, recordAiFailure, recordAiSuccess } from "@/lib/aiHealth";
+import {
+  conservativeDailyLimit,
+  conservativeIntervalMinutes,
+  getStrategyHealth,
+} from "@/lib/strategyHealth";
 import type { AttemptStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +44,16 @@ export async function GET(req: Request) {
       });
     }
 
+    const shutdownReason = await autonomousPostingShutdownReason();
+    if (shutdownReason) {
+      return Response.json({
+        status: "skipped",
+        reason: shutdownReason,
+      });
+    }
+
     const context = await getContext();
+    const strategyHealth = await getStrategyHealth();
     const postingWindows = context.strategy?.posting_windows_utc ?? [];
     if (!isWithinPostingWindows(postingWindows)) {
       return Response.json({
@@ -48,20 +63,41 @@ export async function GET(req: Request) {
       });
     }
 
-    const throttle = await getGenerationThrottleState(context.strategy?.min_post_interval_minutes);
+    const minInterval = conservativeIntervalMinutes(
+      strategyHealth,
+      context.strategy?.min_post_interval_minutes,
+    );
+    const throttle = await getGenerationThrottleState(minInterval);
     if (throttle.shouldSkip) {
       return Response.json({
         status: "skipped",
         reason: "generation interval not elapsed",
         min_post_interval_minutes:
-          context.strategy?.min_post_interval_minutes ?? Number(process.env.GENERATION_MIN_INTERVAL_MINUTES ?? 60),
+          minInterval,
         minutes_until_next: throttle.minutesUntilNext,
         last_attempt_at: throttle.lastAttemptAt,
       });
     }
 
-    const post = await generatePost(context);
-    const safety = await checkSafety(post.text, context.recentPosts, context.strategy);
+    let post;
+    try {
+      post = await generatePost(context);
+      await recordAiSuccess("writer");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await recordAiFailure("writer", message);
+      throw err;
+    }
+
+    let safety;
+    try {
+      safety = await checkSafety(post.text, context.recentPosts, context.strategy);
+      await recordAiSuccess("safety");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await recordAiFailure("safety", message);
+      throw err;
+    }
     const hard = hardBlock(post.text, context.recentPosts);
 
     const [todayPostedCount, dailyLimit] = await Promise.all([
@@ -70,8 +106,8 @@ export async function GET(req: Request) {
     ]);
     const strategyTarget = context.strategy?.target_posts_today;
     const effectiveDailyLimit = strategyTarget
-      ? Math.min(dailyLimit, strategyTarget)
-      : dailyLimit;
+      ? conservativeDailyLimit(strategyHealth, Math.min(dailyLimit, strategyTarget))
+      : conservativeDailyLimit(strategyHealth, dailyLimit);
     const underDailyLimit = todayPostedCount < effectiveDailyLimit;
     const dryRun = process.env.DRY_RUN === "true";
     const safe = safety.approved && hard.ok;

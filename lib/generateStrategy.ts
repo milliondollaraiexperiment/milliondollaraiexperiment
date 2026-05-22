@@ -1,6 +1,14 @@
-import { openai, STRATEGY_FALLBACK_MODEL, STRATEGY_MODEL } from "./openai";
+import {
+  openai,
+  STRATEGY_FALLBACK_MODEL,
+  STRATEGY_MODEL,
+  STRATEGY_SECOND_FALLBACK_MODEL,
+} from "./openai";
 import { sanitizePostingWindows } from "./postingWindows";
 import { getProjectSettings } from "./projectState";
+import { recordAiFailure, recordAiSuccess } from "./aiHealth";
+import { buildStrategyMemoryContext, updateActiveStrategyMemory } from "./strategyMemory";
+import { getStrategyHealth, recordStrategyFailure, recordStrategySuccess } from "./strategyHealth";
 import { supabaseAdmin } from "./supabase";
 import type { StrategyRecord } from "./types";
 
@@ -18,6 +26,8 @@ const VALID_FORMATS = [
 
 const VALID_FORMAT_SET = new Set<string>(VALID_FORMATS);
 const LOOKBACK_DAYS = 3;
+const RECENT_ATTEMPT_LIMIT = 30;
+const RECENT_DONATION_LIMIT = 30;
 
 type AttemptForStrategy = {
   post_type: string | null;
@@ -146,6 +156,8 @@ Rules:
 - Ban mechanical patterns such as numbered observation lists, generic "no donations" updates, or repeated balance-only posts.
 - Never recommend charity, emergency, investment, reward, equity, lottery, raffle, private payment, @mentions, DMs, or guilt.
 - Keep guidance concrete enough for a Writer prompt.
+- Use the compressed summary memory as the primary source of learning. Recent attempts are only a freshness check.
+- Do not let early mistakes dominate forever if later summaries say they were retired or superseded.
 
 Return only valid JSON.`;
 
@@ -246,21 +258,79 @@ function shouldFallbackStrategyModel(err: unknown): boolean {
   );
 }
 
+function deterministicFallbackStrategy(rawMetrics: Record<string, unknown>, failures: number): StrategyRecord {
+  const recoveryMode = failures >= 5;
+  return {
+    summary: recoveryMode
+      ? "Strategy AI is in recovery mode. Use one conservative public ledger update and do not direct ask until Strategy recovers."
+      : "Strategy AI fallback is active. Use conservative public ledger style until the next successful Strategy run.",
+    preferred_formats: recoveryMode
+      ? ["terminal_status", "incident_report"]
+      : ["terminal_status", "incident_report", "direct_ask"],
+    forced_format: null,
+    banned_angles: [
+      "new experimental angles",
+      "numbered observation lists",
+      "generic no-donation filler",
+      "pressure",
+      "charity framing",
+      "investment framing",
+    ],
+    rewrite_guidance: recoveryMode
+      ? "Post no more than one dry public ledger update. No direct ask while Strategy AI is recovering."
+      : "Stay conservative: public ledger, dry tone, low repetition, no new risky angles.",
+    top_reject_reasons: [],
+    target_posts_today: recoveryMode ? 1 : 3,
+    posting_windows_utc: ["13:00-02:00"],
+    min_post_interval_minutes: recoveryMode ? 360 : 180,
+    direct_ask_cadence_hours: recoveryMode ? 24 : 8,
+    keyword_focus: ["AI experiment", "public ledger", "autonomous AI"],
+    hashtag_policy: "Avoid hashtags while Strategy AI is recovering.",
+    link_policy:
+      "Stripe link only on direct asks. Website link only for public-log, strategy, rules, or rejected-attempt posts. Do not place both links in one post.",
+    phase: "cold_start",
+    tone_guidance: "Dry, transparent, conservative, and not needy.",
+    model: "deterministic-fallback",
+    raw_metrics: rawMetrics,
+  };
+}
+
+async function callStrategyModel(model: string, userContent: string) {
+  return openai.chat.completions.create({
+    model,
+    messages: [
+      { role: "system", content: STRATEGY_PROMPT },
+      { role: "user", content: userContent },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "strategy_result",
+        strict: true,
+        schema: STRATEGY_SCHEMA,
+      },
+    },
+    temperature: 0.3,
+  });
+}
+
 export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> {
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const [attemptsRes, donationsRes] = await Promise.all([
+  const [attemptsRes, donationsRes, memoryContext, health] = await Promise.all([
     supabaseAdmin
       .from("attempts")
       .select("post_type,status,safety_reasons,hard_block_reason,public_strategy_note,created_at")
       .gte("created_at", since)
       .order("created_at", { ascending: false })
-      .limit(200),
+      .limit(RECENT_ATTEMPT_LIMIT),
     supabaseAdmin
       .from("donations")
       .select("amount_cents,donor_message,created_at")
       .gte("created_at", since)
       .order("created_at", { ascending: false })
-      .limit(100),
+      .limit(RECENT_DONATION_LIMIT),
+    buildStrategyMemoryContext(),
+    getStrategyHealth(),
   ]);
 
   if (attemptsRes.error) {
@@ -271,7 +341,6 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
   }
 
   const rows = (attemptsRes.data ?? []) as AttemptForStrategy[];
-  if (rows.length === 0) return null;
   const donations = (donationsRes.data ?? []) as DonationForStrategy[];
 
   const formats = rows
@@ -296,6 +365,11 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
       .filter((message): message is string => Boolean(message))
       .slice(0, 12),
     top_reject_reasons: compactTopReasons(rejectedRows),
+    summary_memory_source: {
+      recent_daily_summaries: memoryContext.recentDailySummaries.length,
+      has_weekly_summary: Boolean(memoryContext.latestWeeklySummary),
+      has_monthly_summary: Boolean(memoryContext.latestMonthlySummary),
+    },
   };
   const [settings, totalRaisedCents] = await Promise.all([getProjectSettings(), getTotalRaisedCents()]);
   const goalCents = settings.goal * 100;
@@ -307,60 +381,51 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
       remaining_cents: Math.max(0, goalCents - totalRaisedCents),
       progress_percent: goalCents > 0 ? totalRaisedCents / goalCents : 0,
       rawMetrics,
-      recentAttempts: rows,
-      recentDonations: donations,
+      compressedMemory: memoryContext,
+      recentAttemptsFreshnessCheck: rows,
+      recentDonationsFreshnessCheck: donations,
     },
     null,
     2,
   );
-  let usedModel = STRATEGY_MODEL;
-  let completion;
-  try {
-    completion = await openai.chat.completions.create({
-      model: STRATEGY_MODEL,
-      messages: [
-        { role: "system", content: STRATEGY_PROMPT },
-        { role: "user", content: userContent },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "strategy_result",
-          strict: true,
-          schema: STRATEGY_SCHEMA,
-        },
-      },
-      temperature: 0.3,
-    });
-  } catch (err) {
-    if (!shouldFallbackStrategyModel(err) || STRATEGY_FALLBACK_MODEL === STRATEGY_MODEL) {
-      throw err;
+  const failures = health?.consecutive_failures ?? 0;
+  const modelChain = Array.from(
+    new Set(
+      failures >= 2
+        ? [STRATEGY_FALLBACK_MODEL, STRATEGY_SECOND_FALLBACK_MODEL, STRATEGY_MODEL]
+        : [STRATEGY_MODEL, STRATEGY_FALLBACK_MODEL, STRATEGY_SECOND_FALLBACK_MODEL],
+    ),
+  );
+  let usedModel = modelChain[0];
+  let strategy: StrategyRecord | null = null;
+  let lastError: unknown = null;
+
+  for (const model of modelChain) {
+    try {
+      usedModel = model;
+      const completion = await callStrategyModel(model, userContent);
+      const raw = completion.choices[0]?.message?.content;
+      if (!raw) throw new Error("Strategy AI returned empty content");
+      strategy = sanitizeStrategy(JSON.parse(raw) as StrategyAiResult, rawMetrics, model);
+      await recordAiSuccess("strategy");
+      break;
+    } catch (err) {
+      lastError = err;
+      if (!shouldFallbackStrategyModel(err)) break;
     }
-    usedModel = STRATEGY_FALLBACK_MODEL;
-    completion = await openai.chat.completions.create({
-      model: STRATEGY_FALLBACK_MODEL,
-      messages: [
-        { role: "system", content: STRATEGY_PROMPT },
-        { role: "user", content: userContent },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "strategy_result",
-          strict: true,
-          schema: STRATEGY_SCHEMA,
-        },
-      },
-      temperature: 0.3,
-    });
   }
 
-  const raw = completion.choices[0]?.message?.content;
-  if (!raw) {
-    throw new Error("Strategy AI returned empty content");
+  if (!strategy) {
+    const reason = lastError instanceof Error ? lastError.message : String(lastError);
+    await recordAiFailure("strategy", reason);
+    await recordStrategyFailure(reason, usedModel);
+    const nextFailures = failures + 1;
+    if (nextFailures < 4) {
+      throw lastError instanceof Error ? lastError : new Error(reason);
+    }
+    strategy = deterministicFallbackStrategy(rawMetrics, nextFailures);
   }
 
-  const strategy = sanitizeStrategy(JSON.parse(raw) as StrategyAiResult, rawMetrics, usedModel);
   const { data: inserted, error: insertError } = await supabaseAdmin
     .from("strategies")
     .insert(strategy)
@@ -373,5 +438,25 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
     throw new Error(`generateAndSaveStrategy insert failed: ${insertError.message}`);
   }
 
-  return inserted as StrategyRecord;
+  const insertedStrategy = inserted as StrategyRecord;
+  if (insertedStrategy.model === "deterministic-fallback") {
+    await updateActiveStrategyMemory({
+      summary: insertedStrategy.summary,
+      lessons: insertedStrategy.banned_angles,
+      raw: { fallback: true, rawMetrics },
+    });
+  } else {
+    await recordStrategySuccess(insertedStrategy, usedModel);
+    await updateActiveStrategyMemory({
+      summary: insertedStrategy.summary,
+      lessons: [
+        ...insertedStrategy.rewrite_guidance.split("\n").filter(Boolean),
+        ...insertedStrategy.top_reject_reasons,
+        ...insertedStrategy.banned_angles,
+      ],
+      raw: { rawMetrics, model: usedModel },
+    });
+  }
+
+  return insertedStrategy;
 }

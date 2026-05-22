@@ -8,6 +8,10 @@ import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
 import { ElapsedClock } from "@/components/ElapsedClock";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
+import { getAiHealthMap } from "@/lib/aiHealth";
+import { getStrategyHealth } from "@/lib/strategyHealth";
+import type { AiHealthRecord } from "@/lib/aiHealth";
+import type { StrategyHealthRecord } from "@/lib/strategyHealth";
 import type { ProjectSettings, StrategyRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +73,8 @@ async function loadData() {
     rejectedRes,
     failedRes,
     latestStrategy,
+    strategyHealth,
+    aiHealth,
   ] = await Promise.all([
     supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
     supabaseAdmin
@@ -113,6 +119,8 @@ async function loadData() {
       .order("created_at", { ascending: false })
       .limit(HOMEPAGE_FAILED_LIMIT),
     getLatestStrategy(),
+    getStrategyHealth(),
+    getAiHealthMap(),
   ]);
 
   const settings = normalizeProjectSettings(
@@ -147,6 +155,8 @@ async function loadData() {
     rejected: (rejectedRes.data ?? []) as AttemptRow[],
     failed: (failedRes.data ?? []) as AttemptRow[],
     latestStrategy,
+    strategyHealth,
+    aiHealth,
   };
 }
 
@@ -230,7 +240,30 @@ function StrategyPillList({ items }: { items: string[] }) {
   );
 }
 
-function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
+function HealthBadge({ status }: { status: string }) {
+  const warn = status !== "current" && status !== "healthy";
+  return (
+    <span
+      className={`rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
+        warn
+          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400"
+          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function LatestStrategy({
+  strategy,
+  strategyHealth,
+  aiHealth,
+}: {
+  strategy: StrategyRecord | null;
+  strategyHealth: StrategyHealthRecord | null;
+  aiHealth: Record<string, AiHealthRecord | null>;
+}) {
   if (!strategy) return null;
 
   return (
@@ -244,6 +277,30 @@ function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
         </p>
       )}
       <div className="mt-3 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mb-4 space-y-2 border-b border-zinc-200 pb-4 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Strategy status
+            </p>
+            <HealthBadge status={strategyHealth?.status ?? "current"} />
+          </div>
+          <p className="font-mono text-[11px] leading-5 text-zinc-500">
+            Consecutive strategy failures: {strategyHealth?.consecutive_failures ?? 0}
+            {strategyHealth?.last_failure_reason
+              ? ` / last failure: ${strategyHealth.last_failure_reason}`
+              : ""}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {(["writer", "safety", "summary", "strategy"] as const).map((component) => (
+              <span
+                key={component}
+                className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
+              >
+                {component}: {aiHealth[component]?.status ?? "unknown"}
+              </span>
+            ))}
+          </div>
+        </div>
         <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">{strategy.summary}</p>
         <p className="mt-2 font-mono text-[11px] text-zinc-500">
           Strategy model: {strategy.model ?? "unknown"}
@@ -342,6 +399,8 @@ export default async function Home() {
     rejected,
     failed,
     latestStrategy,
+    strategyHealth,
+    aiHealth,
   } = await loadData();
 
   return (
@@ -513,7 +572,11 @@ export default async function Home() {
           </div>
         </section>
 
-        <LatestStrategy strategy={latestStrategy} />
+        <LatestStrategy
+          strategy={latestStrategy}
+          strategyHealth={strategyHealth}
+          aiHealth={aiHealth}
+        />
 
         {/* How this works */}
         <section className="mt-12">

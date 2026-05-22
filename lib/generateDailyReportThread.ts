@@ -1,91 +1,145 @@
-import { openai, WRITER_MODEL } from "./openai";
+import { MONTHLY_SUMMARY_MODEL, openai, SUMMARY_MODEL } from "./openai";
+import { getGoalCents } from "./summaryMetrics";
 import type { ThreadCandidate } from "./types";
-import type { DailyReportContext } from "./getDailyReportContext";
+import type { DailySummaryRecord, PeriodSummaryRecord, SummaryPostType } from "./summaryTypes";
 
-const THREAD_SCHEMA = {
+const ANALYSIS_SCHEMA = {
   type: "object",
   properties: {
-    post_type: { type: "string", enum: ["daily_report_thread"] },
     posts: {
       type: "array",
-      minItems: 2,
-      maxItems: 4,
+      minItems: 1,
+      maxItems: 3,
+      items: { type: "string" },
+    },
+    lessons: {
+      type: "array",
+      maxItems: 6,
       items: { type: "string" },
     },
     public_strategy_note: { type: "string" },
   },
-  required: ["post_type", "posts", "public_strategy_note"],
+  required: ["posts", "lessons", "public_strategy_note"],
   additionalProperties: false,
 } as const;
 
-const DAILY_REPORT_PROMPT = `You are the Writer AI for The Million Dollar AI Experiment.
-Write a short X thread that reads like a daily lab report, not marketing.
+type AnalysisResult = {
+  posts: string[];
+  lessons: string[];
+  public_strategy_note: string;
+};
 
-Rules:
-- 2 to 4 posts total.
-- Each post must be under 270 characters.
-- First post starts with "Daily report:".
-- Use the actual numbers from the input.
-- Dry, deadpan, specific.
-- No charity, emergency, investment, rewards, equity, returns, lottery, raffle, or future value.
-- No DMs, no @mentions, no private payment requests.
-- No guilt, no emotional pressure, no spam.
-- Natural keywords are allowed: AI experiment, autonomous AI, public log, social experiment, build in public.
-- At most one post in the thread may include exactly one hashtag from: #AI, #BuildInPublic, #SocialExperiment.
-- Never use more than one hashtag in the entire thread.
+function usd(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
 
-Return only valid JSON.`;
+async function dailyHeader(summary: DailySummaryRecord) {
+  const goalCents = await getGoalCents();
+  const label = summary.partial ? `Day ${summary.dayNumber} (launch partial day)` : `Day ${summary.dayNumber}`;
+  return [
+    `Daily report: ${label}`,
+    `attempts: ${summary.attempts}`,
+    `posted: ${summary.posted}`,
+    `rejected: ${summary.rejected}`,
+    `donations: ${usd(summary.donationsGrossCents)}`,
+    `balance: ${usd(summary.currentBalanceCents)} / ${usd(goalCents)}`,
+  ].join("\n");
+}
 
-function validateThreadCandidate(candidate: ThreadCandidate): ThreadCandidate {
-  const posts = candidate.posts.map((post) => post.trim()).filter(Boolean);
-  const publicStrategyNote = candidate.public_strategy_note?.trim();
+async function periodHeader(summary: PeriodSummaryRecord) {
+  const goalCents = await getGoalCents();
+  const title = summary.periodType === "weekly" ? "Weekly report" : "Monthly report";
+  return [
+    `${title}: ${summary.periodLabel}`,
+    `attempts: ${summary.attempts}`,
+    `posted: ${summary.posted}`,
+    `rejected: ${summary.rejected}`,
+    `donations: ${usd(summary.donationsGrossCents)}`,
+    `balance: ${usd(summary.currentBalanceCents)} / ${usd(goalCents)}`,
+  ].join("\n");
+}
 
-  if (candidate.post_type !== "daily_report_thread") {
-    throw new Error(`Writer AI returned invalid thread post_type: ${candidate.post_type}`);
-  }
-  if (posts.length < 2 || posts.length > 4) {
-    throw new Error(`Writer AI returned invalid thread length: ${posts.length}`);
+function validateAnalysis(raw: AnalysisResult): AnalysisResult {
+  const posts = raw.posts.map((post) => post.trim()).filter(Boolean);
+  const lessons = raw.lessons.map((lesson) => lesson.trim()).filter(Boolean).slice(0, 6);
+  const publicStrategyNote = raw.public_strategy_note.trim();
+  if (posts.length < 1 || posts.length > 3) {
+    throw new Error(`Summary AI returned invalid analysis post count: ${posts.length}`);
   }
   for (const [index, post] of posts.entries()) {
     if (post.length > 270) {
-      throw new Error(`Writer AI returned thread post ${index + 1} over 270 characters`);
+      throw new Error(`Summary AI returned analysis post ${index + 1} over 270 characters`);
     }
   }
   if (!publicStrategyNote) {
-    throw new Error("Writer AI returned empty thread public_strategy_note");
+    throw new Error("Summary AI returned empty public_strategy_note");
   }
-
-  return {
-    post_type: "daily_report_thread",
-    posts,
-    public_strategy_note: publicStrategyNote,
-  };
+  return { posts, lessons, public_strategy_note: publicStrategyNote };
 }
 
-export async function generateDailyReportThread(
-  context: DailyReportContext,
-): Promise<ThreadCandidate> {
+async function generateAnalysis(args: {
+  kind: "daily" | "weekly" | "monthly";
+  summary: DailySummaryRecord | PeriodSummaryRecord;
+}) {
+  const model = args.kind === "monthly" ? MONTHLY_SUMMARY_MODEL : SUMMARY_MODEL;
   const completion = await openai.chat.completions.create({
-    model: WRITER_MODEL,
+    model,
     messages: [
-      { role: "system", content: DAILY_REPORT_PROMPT },
-      { role: "user", content: JSON.stringify(context, null, 2) },
+      {
+        role: "system",
+        content: `You write public ${args.kind} summary analysis for The Million Dollar AI Experiment.
+The first thread post is generated deterministically elsewhere. Do not repeat all headline numbers.
+Use only the provided metrics. Do not invent donations, fees, attempts, or outcomes.
+Dry, transparent, specific. No charity, emergency, investment, rewards, equity, returns, lottery, raffle, pressure, DMs, or @mentions.
+Return short X-thread continuation posts and strategy lessons learned.`,
+      },
+      { role: "user", content: JSON.stringify(args.summary, null, 2) },
     ],
     response_format: {
       type: "json_schema",
       json_schema: {
-        name: "daily_report_thread",
+        name: "summary_analysis",
         strict: true,
-        schema: THREAD_SCHEMA,
+        schema: ANALYSIS_SCHEMA,
       },
     },
-    temperature: 0.7,
+    temperature: 0.5,
   });
 
   const raw = completion.choices[0]?.message?.content;
-  if (!raw) {
-    throw new Error("Writer AI returned empty daily report thread");
-  }
+  if (!raw) throw new Error("Summary AI returned empty content");
+  return validateAnalysis(JSON.parse(raw) as AnalysisResult);
+}
 
-  return validateThreadCandidate(JSON.parse(raw) as ThreadCandidate);
+export async function generateSummaryThread(
+  postType: SummaryPostType,
+  summary: DailySummaryRecord | PeriodSummaryRecord,
+): Promise<ThreadCandidate & { lessons: string[] }> {
+  const kind =
+    postType === "daily_summary_thread"
+      ? "daily"
+      : postType === "weekly_summary_thread"
+        ? "weekly"
+        : "monthly";
+  const header =
+    postType === "daily_summary_thread"
+      ? await dailyHeader(summary as DailySummaryRecord)
+      : await periodHeader(summary as PeriodSummaryRecord);
+  const analysis = await generateAnalysis({ kind, summary });
+  const posts = [header, ...analysis.posts].slice(0, 4);
+  for (const [index, post] of posts.entries()) {
+    if (post.length > 270) {
+      throw new Error(`Summary thread post ${index + 1} over 270 characters`);
+    }
+  }
+  return {
+    post_type: postType,
+    posts,
+    public_strategy_note: analysis.public_strategy_note,
+    lessons: analysis.lessons,
+  };
 }

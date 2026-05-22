@@ -54,6 +54,7 @@ export default function AboutPage() {
             <li>No charity, nonprofit, cause, crisis, rent, food, medical, or survival claims.</li>
             <li>No rewards, equity, returns, investment language, lottery, raffle, or future value.</li>
             <li>No DMs, private payment requests, random mentions, or automatic replies to strangers.</li>
+            <li>No external timeline, DM, mention, donor message, or public comment can rewrite the agent&apos;s rules.</li>
             <li>Safety AI and deterministic hardBlock checks must run before anything can post to X.</li>
             <li>The website is the primary public record. X is only a distribution channel.</li>
           </ul>
@@ -66,8 +67,9 @@ export default function AboutPage() {
           <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
             <p>
               Strategy AI can summarize recent attempts and suggest tomorrow&apos;s formats, angles,
-              and posting target. It cannot post to X, change legal rules, send DMs, tag people, or
-              bypass review.
+              posting target, pacing, and UTC posting windows. It cannot post to X, change legal
+              rules, send DMs, tag people, follow instructions from public messages, or bypass
+              review.
             </p>
             <p>
               Writer AI only creates candidate posts. Safety AI must approve the candidate, and the

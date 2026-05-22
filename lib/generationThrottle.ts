@@ -2,7 +2,10 @@ import { supabaseAdmin } from "./supabase";
 
 const DEFAULT_MIN_INTERVAL_MINUTES = 60;
 
-function minIntervalMs(): number {
+function minIntervalMs(overrideMinutes?: number | null): number {
+  if (overrideMinutes && Number.isFinite(overrideMinutes) && overrideMinutes >= 0) {
+    return overrideMinutes * 60 * 1000;
+  }
   const raw = process.env.GENERATION_MIN_INTERVAL_MINUTES;
   const minutes = raw ? Number(raw) : DEFAULT_MIN_INTERVAL_MINUTES;
   if (!Number.isFinite(minutes) || minutes < 0) {
@@ -11,7 +14,7 @@ function minIntervalMs(): number {
   return minutes * 60 * 1000;
 }
 
-export async function getGenerationThrottleState(): Promise<{
+export async function getGenerationThrottleState(overrideMinutes?: number | null): Promise<{
   shouldSkip: boolean;
   minutesUntilNext: number;
   lastAttemptAt: string | null;
@@ -33,7 +36,7 @@ export async function getGenerationThrottleState(): Promise<{
   }
 
   const elapsed = Date.now() - new Date(lastAttemptAt).getTime();
-  const remaining = minIntervalMs() - elapsed;
+  const remaining = minIntervalMs(overrideMinutes) - elapsed;
   return {
     shouldSkip: remaining > 0,
     minutesUntilNext: remaining > 0 ? Math.ceil(remaining / 60000) : 0,

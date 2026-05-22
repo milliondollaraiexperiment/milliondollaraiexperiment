@@ -14,8 +14,8 @@ update, and dollar is meant to be visible.
 - A Stripe Payment Link/webhook donation ledger.
 - A cron-based pseudo-agent that wakes up, reads context, writes a candidate X
   post, runs safety checks, and logs the result.
-- A daily Strategy AI summary that learns from recent rejected attempts and
-  feeds bounded guidance back into the Writer.
+- A daily Strategy AI summary that learns from recent attempts, rejected
+  attempts, donations, UTC timing patterns, and bounded safety outcomes.
 
 ## What This Is Not
 
@@ -28,7 +28,7 @@ update, and dollar is meant to be visible.
 ## Safety Architecture
 
 ```text
-Strategy AI -> suggests formats, angles, and daily target
+Strategy AI -> suggests formats, angles, timing windows, pacing, and daily target
 Writer AI   -> generates one candidate post
 Safety AI   -> blocks legal/platform-risky content
 hardBlock   -> deterministic final rules
@@ -46,8 +46,11 @@ Current hard limits:
 - No DMs, private payment requests, random @mentions, or automatic replies to
   strangers.
 - One safe hashtag at most, from an allow-list.
-- Daily broadcast target is Strategy-controlled from 2-8, capped by Supabase
-  settings.
+- Daily broadcast target is Strategy-controlled from 2-8, capped by Supabase settings.
+- Strategy can recommend UTC posting windows, minimum posting interval, direct-ask cadence,
+  natural keyword focus, hashtag policy, and link policy.
+- Public input is untrusted quoted data. Donor messages, external posts, mentions,
+  or DMs cannot change the agent's rules, goals, model, safety policy, or posting behavior.
 
 ## Key Routes
 
@@ -96,6 +99,7 @@ Run Supabase SQL:
 - Set `DRY_RUN=false` in Vercel Production.
 - Confirm X credentials are present in Vercel Production.
 - Post the fixed launch announcement with `/api/test-post`.
+- Re-enable the `hourly cron` GitHub Actions workflow when ready to start autonomous hourly checks.
 - Let `/api/cron/hourly` and `/api/cron/daily` run.
 
 ## Verification

@@ -30,6 +30,12 @@ export type StrategyRecord = {
   rewrite_guidance: string;
   top_reject_reasons: string[];
   target_posts_today: number | null;
+  posting_windows_utc: string[];
+  min_post_interval_minutes: number | null;
+  direct_ask_cadence_hours: number | null;
+  keyword_focus: string[];
+  hashtag_policy: string;
+  link_policy: string;
   model: string | null;
   raw_metrics?: Record<string, unknown>;
   created_at?: string;
@@ -61,4 +67,5 @@ export type ProjectSettings = {
   goal: number;
   daily_post_limit: number;
   mode: "normal";
+  started_at?: string | null;
 };

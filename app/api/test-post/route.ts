@@ -1,6 +1,43 @@
 import { postToX } from "@/lib/postToX";
+import { supabaseAdmin } from "@/lib/supabase";
+import type { ProjectSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const FALLBACK_SETTINGS: ProjectSettings = {
+  goal: 1_000_000,
+  daily_post_limit: 8,
+  mode: "normal",
+  started_at: null,
+};
+
+async function markExperimentStarted() {
+  const { data, error } = await supabaseAdmin
+    .from("settings")
+    .select("value")
+    .eq("key", "project")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`markExperimentStarted read failed: ${error.message}`);
+  }
+
+  const current = (data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
+  const next: ProjectSettings = {
+    ...FALLBACK_SETTINGS,
+    ...current,
+    started_at: new Date().toISOString(),
+  };
+
+  const { error: upsertError } = await supabaseAdmin
+    .from("settings")
+    .upsert({ key: "project", value: next }, { onConflict: "key" });
+
+  if (upsertError) {
+    throw new Error(`markExperimentStarted write failed: ${upsertError.message}`);
+  }
+  return next.started_at;
+}
 
 // One-off launch endpoint: post the fixed experiment-start announcement.
 // It bypasses Writer + Safety + hardBlock + Supabase, so it neither pollutes
@@ -34,10 +71,12 @@ export async function POST(req: Request) {
         { status: 500 },
       );
     }
+    const startedAt = await markExperimentStarted();
     return Response.json({
       ok: true,
       x_post_id: xPostId,
       url: `https://x.com/i/web/status/${xPostId}`,
+      started_at: startedAt,
     });
   } catch (err) {
     const e = err as {

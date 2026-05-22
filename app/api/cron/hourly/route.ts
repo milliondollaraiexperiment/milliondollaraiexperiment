@@ -7,6 +7,7 @@ import { getTodayPostedCount, getDailyPostLimit } from "@/lib/rateLimit";
 import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
+import { isWithinPostingWindows } from "@/lib/postingWindows";
 import type { AttemptStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,17 +24,28 @@ export async function GET(req: Request) {
   }
 
   try {
-    const throttle = await getGenerationThrottleState();
+    const context = await getContext();
+    const postingWindows = context.strategy?.posting_windows_utc ?? [];
+    if (!isWithinPostingWindows(postingWindows)) {
+      return Response.json({
+        status: "skipped",
+        reason: "outside strategy posting window",
+        posting_windows_utc: postingWindows,
+      });
+    }
+
+    const throttle = await getGenerationThrottleState(context.strategy?.min_post_interval_minutes);
     if (throttle.shouldSkip) {
       return Response.json({
         status: "skipped",
         reason: "generation interval not elapsed",
+        min_post_interval_minutes:
+          context.strategy?.min_post_interval_minutes ?? Number(process.env.GENERATION_MIN_INTERVAL_MINUTES ?? 60),
         minutes_until_next: throttle.minutesUntilNext,
         last_attempt_at: throttle.lastAttemptAt,
       });
     }
 
-    const context = await getContext();
     const post = await generatePost(context);
     const safety = await checkSafety(post.text, context.recentPosts, context.strategy);
     const hard = hardBlock(post.text, context.recentPosts);

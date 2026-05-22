@@ -5,6 +5,7 @@ import { getLatestStrategy } from "@/lib/getLatestStrategy";
 import { SAFETY_MODEL, WRITER_MODEL } from "@/lib/openai";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
+import { ElapsedClock } from "@/components/ElapsedClock";
 import type { ProjectSettings, StrategyRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ const FALLBACK_SETTINGS: ProjectSettings = {
   goal: 1_000_000,
   daily_post_limit: 8,
   mode: "normal",
+  started_at: null,
 };
 
 const RULES = [
@@ -43,6 +45,13 @@ const HOMEPAGE_REJECTED_LIMIT = 3;
 const HOMEPAGE_FAILED_LIMIT = 3;
 const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
 const X_PROFILE_URL = process.env.NEXT_PUBLIC_X_PROFILE_URL;
+
+function elapsedSecondsFromStartedAt(startedAt: string | null | undefined): number {
+  if (!startedAt) return 0;
+  const startedMs = new Date(startedAt).getTime();
+  if (!Number.isFinite(startedMs)) return 0;
+  return Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
+}
 
 async function loadData() {
   const [
@@ -115,9 +124,7 @@ async function loadData() {
   return {
     settings,
     currentAmount: totalCents / 100,
-    hoursAwake: attemptsCount,
-    daysAwake: Math.floor(attemptsCount / 24),
-    monthsAwake: Math.floor(attemptsCount / (24 * 30)),
+    elapsedSeconds: elapsedSecondsFromStartedAt(settings.started_at),
     displayedHour: attemptsCount,
     postedCount,
     loggedOnlyCount,
@@ -248,6 +255,35 @@ function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
             Today&apos;s AI posting target: {strategy.target_posts_today}
           </p>
         )}
+        {strategy.posting_windows_utc.length > 0 && (
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Posting windows UTC
+            </p>
+            <StrategyPillList items={strategy.posting_windows_utc} />
+          </div>
+        )}
+        {(strategy.min_post_interval_minutes || strategy.direct_ask_cadence_hours) && (
+          <p className="mt-4 font-mono text-[11px] text-zinc-500">
+            Min interval: {strategy.min_post_interval_minutes ?? 60} min
+            {" / "}
+            Direct ask cadence: {strategy.direct_ask_cadence_hours ?? 6} h
+          </p>
+        )}
+        {strategy.keyword_focus.length > 0 && (
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Discovery focus
+            </p>
+            <StrategyPillList items={strategy.keyword_focus} />
+          </div>
+        )}
+        {(strategy.hashtag_policy || strategy.link_policy) && (
+          <div className="mt-4 space-y-1 text-[11px] leading-5 text-zinc-500">
+            {strategy.hashtag_policy && <p>Hashtag policy: {strategy.hashtag_policy}</p>}
+            {strategy.link_policy && <p>Link policy: {strategy.link_policy}</p>}
+          </div>
+        )}
         {(strategy.forced_format || strategy.preferred_formats.length > 0) && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
@@ -278,9 +314,7 @@ export default async function Home() {
   const {
     settings,
     currentAmount,
-    hoursAwake,
-    daysAwake,
-    monthsAwake,
+    elapsedSeconds,
     displayedHour,
     postedCount,
     visibleCount,
@@ -334,10 +368,9 @@ export default async function Home() {
         <section className="mt-12">
           <ProgressBar current={currentAmount} goal={settings.goal} />
 
-          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-y border-zinc-200 py-5 sm:grid-cols-3 sm:gap-x-6 dark:border-zinc-800">
-            <Stat value={hoursAwake} label="hours awake" />
-            <Stat value={daysAwake} label="days awake" />
-            <Stat value={monthsAwake} label="months awake" />
+          <ElapsedClock initialElapsedSeconds={elapsedSeconds} />
+
+          <div className="mt-6 grid grid-cols-3 gap-x-4 gap-y-5 border-b border-zinc-200 pb-5 sm:gap-x-6 dark:border-zinc-800">
             <Stat value={postedCount} label="successful posts" />
             <Stat value={rejectedCount} label="rejected attempts" />
             <Stat value={donorCount} label="donors" />

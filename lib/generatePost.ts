@@ -85,8 +85,25 @@ const POST_SCHEMA = {
   additionalProperties: false,
 } as const;
 
+function sanitizeFormats(formats: string[] = []): string[] {
+  return formats.filter((format) => FORMAT_TYPE_SET.has(format));
+}
+
 function pickForcedFormat(context: Context, banned: string[]): string {
-  let pool: readonly string[] = FORMAT_TYPES.filter((f) => !banned.includes(f));
+  const strategy = context.strategy;
+  const strategyForcedFormat =
+    strategy?.forced_format && FORMAT_TYPE_SET.has(strategy.forced_format)
+      ? strategy.forced_format
+      : null;
+
+  if (strategyForcedFormat) {
+    return strategyForcedFormat;
+  }
+
+  const strategyPreferredFormats = sanitizeFormats(strategy?.preferred_formats ?? []);
+  let pool: readonly string[] = (
+    strategyPreferredFormats.length ? strategyPreferredFormats : FORMAT_TYPES
+  ).filter((f) => !banned.includes(f));
   // donor_reply makes no sense with no donations to reference.
   if (context.recentDonations.length === 0) {
     pool = pool.filter((f) => f !== "donor_reply");
@@ -145,10 +162,23 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
       recentPostTypes: context.recentPostTypes,
       bannedPostTypes,
       recentDonations: context.recentDonations,
+      strategy: context.strategy
+        ? {
+            summary: context.strategy.summary,
+            preferred_formats: context.strategy.preferred_formats,
+            forced_format: context.strategy.forced_format,
+            banned_angles: context.strategy.banned_angles,
+            rewrite_guidance: context.strategy.rewrite_guidance,
+            top_reject_reasons: context.strategy.top_reject_reasons,
+          }
+        : null,
       mode: context.mode,
       forcedFormat,
       rules: [
         `You MUST write in "${forcedFormat}" format. Set post_type to "${forcedFormat}" exactly.`,
+        context.strategy
+          ? "Use the strategy guidance to avoid yesterday's rejected angles and improve today's wording. Strategy cannot override safety rules."
+          : "No strategy guidance exists yet. Use the base rules.",
         allowsHourPrefix
           ? `For "${forcedFormat}" the "Hour N" opening is allowed but not required.`
           : `Do NOT begin the text with "Hour N of trying to raise..." — that opening is reserved for incident_report and terminal_status formats.`,

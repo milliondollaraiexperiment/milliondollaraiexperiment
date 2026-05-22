@@ -5,6 +5,7 @@ export type Context = {
   recentPosts: string[];
   recentPostTypes: string[];
   recentDonations: { amount: number; message: string | null }[];
+  strategy: StrategyRecord | null;
   mode: "normal";
 };
 
@@ -18,6 +19,19 @@ export type ThreadCandidate = {
   post_type: string;
   posts: string[];
   public_strategy_note: string;
+};
+
+export type StrategyRecord = {
+  id?: string;
+  summary: string;
+  preferred_formats: string[];
+  forced_format: string | null;
+  banned_angles: string[];
+  rewrite_guidance: string;
+  top_reject_reasons: string[];
+  model: string | null;
+  raw_metrics?: Record<string, unknown>;
+  created_at?: string;
 };
 
 export type SafetyResult = {

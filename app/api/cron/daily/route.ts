@@ -1,5 +1,6 @@
 import { checkSafety } from "@/lib/checkSafety";
 import { generateDailyReportThread } from "@/lib/generateDailyReportThread";
+import { generateAndSaveStrategy } from "@/lib/generateStrategy";
 import { getContext } from "@/lib/getContext";
 import { getDailyReportContext } from "@/lib/getDailyReportContext";
 import { hardBlock } from "@/lib/hardBlock";
@@ -37,6 +38,15 @@ export async function GET(req: Request) {
   }
 
   try {
+    let strategyId: string | null = null;
+    try {
+      const strategy = await generateAndSaveStrategy();
+      strategyId = strategy?.id ?? null;
+    } catch {
+      // Strategy improves the next writer run, but it must not block the
+      // daily public report or the safety pipeline.
+    }
+
     const [dailyContext, context, todayPostedCount, dailyLimit] = await Promise.all([
       getDailyReportContext(),
       getContext(),
@@ -103,6 +113,7 @@ export async function GET(req: Request) {
       today_posted_count: todayPostedCount,
       daily_limit: dailyLimit,
       dry_run: dryRun,
+      strategy_id: strategyId,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getLatestStrategy } from "@/lib/getLatestStrategy";
+import { SAFETY_MODEL, WRITER_MODEL } from "@/lib/openai";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
-import type { ProjectSettings } from "@/lib/types";
+import type { ProjectSettings, StrategyRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ async function loadData() {
     postedRes,
     rejectedRes,
     failedRes,
+    latestStrategy,
   ] = await Promise.all([
     supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
     supabaseAdmin
@@ -95,6 +98,7 @@ async function loadData() {
       .eq("status", "failed")
       .order("created_at", { ascending: false })
       .limit(HOMEPAGE_FAILED_LIMIT),
+    getLatestStrategy(),
   ]);
 
   const settings = (settingsRes.data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
@@ -126,6 +130,7 @@ async function loadData() {
     posted: (postedRes.data ?? []) as AttemptRow[],
     rejected: (rejectedRes.data ?? []) as AttemptRow[],
     failed: (failedRes.data ?? []) as AttemptRow[],
+    latestStrategy,
   };
 }
 
@@ -148,6 +153,74 @@ function formatUsd(cents: number) {
   }).format(cents / 100);
 }
 
+function StrategyPillList({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {items.slice(0, 4).map((item) => (
+        <span
+          key={item}
+          className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
+        >
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
+  if (!strategy) return null;
+
+  return (
+    <section className="mt-12">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        Latest strategy update
+      </h2>
+      <div className="mt-3 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">{strategy.summary}</p>
+        <p className="mt-2 font-mono text-[11px] text-zinc-500">
+          Strategy model: {strategy.model ?? "unknown"}
+        </p>
+        {strategy.rewrite_guidance && (
+          <p className="mt-3 text-xs italic leading-5 text-zinc-500">
+            Today&apos;s adjustment: {strategy.rewrite_guidance}
+          </p>
+        )}
+        {strategy.top_reject_reasons.length > 0 && (
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Recent rejection signals
+            </p>
+            <StrategyPillList items={strategy.top_reject_reasons} />
+          </div>
+        )}
+        {(strategy.forced_format || strategy.preferred_formats.length > 0) && (
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Writer bias
+            </p>
+            <StrategyPillList
+              items={[
+                ...(strategy.forced_format ? [`forced: ${strategy.forced_format}`] : []),
+                ...strategy.preferred_formats.map((format) => `prefer: ${format}`),
+              ]}
+            />
+          </div>
+        )}
+        {strategy.banned_angles.length > 0 && (
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Avoiding
+            </p>
+            <StrategyPillList items={strategy.banned_angles} />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default async function Home() {
   const {
     settings,
@@ -162,6 +235,7 @@ export default async function Home() {
     posted,
     rejected,
     failed,
+    latestStrategy,
   } = await loadData();
 
   return (
@@ -293,6 +367,8 @@ export default async function Home() {
           </div>
         </section>
 
+        <LatestStrategy strategy={latestStrategy} />
+
         {/* How this works */}
         <section className="mt-12">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -303,6 +379,10 @@ export default async function Home() {
               An autonomous AI generates one candidate post every hour. Each candidate runs through
               a second AI (Safety AI) and a deterministic rule check (hardBlock) before anything is
               published. Most candidates never make it out.
+            </p>
+            <p className="font-mono text-xs text-zinc-500">
+              Writer model: {WRITER_MODEL}. Safety model: {SAFETY_MODEL}. Strategy model:{" "}
+              {latestStrategy?.model ?? "gpt-5 when strategy is enabled"}.
             </p>
             <p>
               Everything is logged here — the posts that went out, the ones that were rejected, and

@@ -45,7 +45,7 @@ const BANNED_PHRASES = [
   "rent is due",
 ];
 
-const SIMILARITY_THRESHOLD = 0.9;
+const SIMILARITY_THRESHOLD = 0.94;
 const SIMILARITY_WINDOW = 5; // compare only against the last N recent posts
 const MAX_LENGTH = 270;
 const MENTION_REGEX = /\B@\w+/;

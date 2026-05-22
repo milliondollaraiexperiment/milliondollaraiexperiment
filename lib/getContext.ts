@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "./supabase";
+import { getLatestStrategy } from "./getLatestStrategy";
 import type { Context, ProjectSettings } from "./types";
 
 const FALLBACK_SETTINGS: ProjectSettings = {
@@ -11,8 +12,14 @@ const RECENT_POSTS_LIMIT = 5;
 const RECENT_DONATIONS_LIMIT = 5;
 
 export async function getContext(): Promise<Context> {
-  const [settingsRes, donationsAggRes, attemptsCountRes, recentPostsRes, recentDonationsRes] =
-    await Promise.all([
+  const [
+    settingsRes,
+    donationsAggRes,
+    attemptsCountRes,
+    recentPostsRes,
+    recentDonationsRes,
+    latestStrategy,
+  ] = await Promise.all([
       supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
       supabaseAdmin.from("donations").select("amount_cents"),
       supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
@@ -33,6 +40,7 @@ export async function getContext(): Promise<Context> {
         .select("amount_cents,donor_message")
         .order("created_at", { ascending: false })
         .limit(RECENT_DONATIONS_LIMIT),
+      getLatestStrategy(),
     ]);
 
   const settings = (settingsRes.data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
@@ -62,6 +70,7 @@ export async function getContext(): Promise<Context> {
     recentPosts,
     recentPostTypes,
     recentDonations,
+    strategy: latestStrategy,
     mode: settings.mode,
   };
 }

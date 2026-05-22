@@ -6,3 +6,4 @@ export const openai = new OpenAI({
 
 export const WRITER_MODEL = "gpt-4o-mini";
 export const SAFETY_MODEL = "gpt-4o-mini";
+export const STRATEGY_MODEL = "gpt-5";

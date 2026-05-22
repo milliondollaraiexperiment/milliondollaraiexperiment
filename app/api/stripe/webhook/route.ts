@@ -38,9 +38,17 @@ export async function POST(req: Request) {
 
     if (amount > 0 && session.payment_status === "paid") {
       const donorName = session.customer_details?.name ?? null;
-      // No donor message yet — payment_link doesn't ship one out of the
-      // box. Phase 7 (donor wall) wires custom fields.
-      const donorMessage: string | null = null;
+
+      // Donor message: extract from the Payment Link's custom_fields.
+      // We accept whatever the first text-type custom field returns, so
+      // the merchant can name the field whatever in the Stripe dashboard
+      // (e.g. "Optional public message", "Note", "Why are you donating").
+      // Capped at 280 chars defensively even though Stripe enforces ~255.
+      const messageField = (session.custom_fields ?? []).find(
+        (f) => f.type === "text" && f.text?.value,
+      );
+      const rawMessage = messageField?.text?.value ?? null;
+      const donorMessage = rawMessage ? rawMessage.slice(0, 280) : null;
 
       const { error } = await supabaseAdmin.from("donations").insert({
         amount_cents: amount,

@@ -53,7 +53,10 @@ async function loadData() {
     failedRes,
   ] = await Promise.all([
     supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
-    supabaseAdmin.from("donations").select("amount_cents"),
+    supabaseAdmin
+      .from("donations")
+      .select("amount_cents,donor_name,donor_message,created_at")
+      .order("created_at", { ascending: false }),
     supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
     supabaseAdmin
       .from("attempts")
@@ -113,6 +116,12 @@ async function loadData() {
     visibleCount,
     rejectedCount,
     donorCount: donations.length,
+    recentDonations: donations.slice(0, 5) as {
+      amount_cents: number;
+      donor_name: string | null;
+      donor_message: string | null;
+      created_at: string;
+    }[],
     posted: (postedRes.data ?? []) as AttemptRow[],
     rejected: (rejectedRes.data ?? []) as AttemptRow[],
     failed: (failedRes.data ?? []) as AttemptRow[],
@@ -130,6 +139,14 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
+function formatUsd(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
+
 export default async function Home() {
   const {
     settings,
@@ -140,6 +157,7 @@ export default async function Home() {
     visibleCount,
     rejectedCount,
     donorCount,
+    recentDonations,
     posted,
     rejected,
     failed,
@@ -205,6 +223,44 @@ export default async function Home() {
             </span>
           </div>
         </section>
+
+        {/* Recent contributions (only if any) */}
+        {recentDonations.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Recent contributions
+              </h2>
+              {donorCount > recentDonations.length && (
+                <span className="text-[11px] text-zinc-500">
+                  Showing latest {recentDonations.length} of {donorCount}.
+                </span>
+              )}
+            </div>
+            <ul className="mt-4 space-y-3">
+              {recentDonations.map((d, i) => (
+                <li
+                  key={d.created_at + i}
+                  className="rounded-md border border-zinc-300 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                      {formatUsd(d.amount_cents)}
+                    </span>
+                    <span className="font-mono text-[11px] text-zinc-500">
+                      {d.donor_name?.trim() || "anonymous"}
+                    </span>
+                  </div>
+                  {d.donor_message && (
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-700 dark:text-zinc-300">
+                      &ldquo;{d.donor_message}&rdquo;
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* How this works */}
         <section className="mt-12">

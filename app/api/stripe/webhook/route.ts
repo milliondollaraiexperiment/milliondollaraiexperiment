@@ -5,6 +5,87 @@ import { moderateDonorMessage } from "@/lib/moderateDonorMessage";
 
 export const dynamic = "force-dynamic";
 
+type DonationInsert = {
+  amount_cents: number;
+  donor_name: null;
+  donor_message: string | null;
+  provider: "stripe";
+  provider_session_id: string;
+  gross_amount_cents?: number;
+  stripe_fee_cents?: number | null;
+  net_amount_cents?: number | null;
+  currency?: string;
+  paid_at?: string;
+  stripe_payment_intent_id?: string | null;
+  stripe_charge_id?: string | null;
+  stripe_balance_transaction_id?: string | null;
+  stripe_fee_details?: Stripe.BalanceTransaction.FeeDetail[] | null;
+};
+
+function objectId(value: string | { id: string } | null | undefined): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value : value.id;
+}
+
+async function getStripeAccounting(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+): Promise<Partial<DonationInsert>> {
+  const paymentIntentId = objectId(session.payment_intent);
+  if (!paymentIntentId) {
+    return {};
+  }
+
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+    expand: ["latest_charge.balance_transaction"],
+  });
+  const charge = paymentIntent.latest_charge;
+  const chargeId = objectId(charge);
+
+  let balanceTransaction: Stripe.BalanceTransaction | null = null;
+  if (charge && typeof charge !== "string") {
+    const balance = charge.balance_transaction;
+    if (balance && typeof balance !== "string") {
+      balanceTransaction = balance;
+    } else if (typeof balance === "string") {
+      balanceTransaction = await stripe.balanceTransactions.retrieve(balance);
+    }
+  }
+
+  return {
+    stripe_payment_intent_id: paymentIntentId,
+    stripe_charge_id: chargeId,
+    stripe_balance_transaction_id: balanceTransaction?.id ?? null,
+    stripe_fee_cents: balanceTransaction?.fee ?? null,
+    net_amount_cents: balanceTransaction?.net ?? null,
+    currency: (balanceTransaction?.currency ?? session.currency ?? "usd").toLowerCase(),
+    stripe_fee_details: balanceTransaction?.fee_details ?? null,
+  };
+}
+
+async function insertDonation(row: DonationInsert) {
+  const { error } = await supabaseAdmin.from("donations").insert(row);
+  if (!error || error.code === "23505") {
+    return error;
+  }
+
+  // If the accounting SQL has not been run yet, keep the live webhook safe.
+  // Supabase can report missing columns either as Postgres 42703 or REST schema-cache errors.
+  if (error.code === "42703" || error.code?.startsWith("PGRST")) {
+    const fallback = {
+      amount_cents: row.amount_cents,
+      donor_name: row.donor_name,
+      donor_message: row.donor_message,
+      provider: row.provider,
+      provider_session_id: row.provider_session_id,
+    };
+    const fallbackRes = await supabaseAdmin.from("donations").insert(fallback);
+    return fallbackRes.error;
+  }
+
+  return error;
+}
+
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   if (!SIGNING_SECRET) {
@@ -55,13 +136,25 @@ export async function POST(req: Request) {
       );
       const rawMessage = messageField?.text?.value ?? null;
       const donorMessage = moderateDonorMessage(rawMessage);
+      const paidAt = new Date((session.created || event.created) * 1000).toISOString();
 
-      const { error } = await supabaseAdmin.from("donations").insert({
+      let accounting: Partial<DonationInsert> = {};
+      try {
+        accounting = await getStripeAccounting(stripe, session);
+      } catch {
+        accounting = {};
+      }
+
+      const error = await insertDonation({
         amount_cents: amount,
+        gross_amount_cents: amount,
         donor_name: null,
         donor_message: donorMessage,
         provider: "stripe",
         provider_session_id: session.id,
+        currency: (session.currency ?? "usd").toLowerCase(),
+        paid_at: paidAt,
+        ...accounting,
       });
 
       if (error && error.code !== "23505") {

@@ -289,6 +289,12 @@ function LatestStrategy({ strategy }: { strategy: StrategyRecord | null }) {
             {strategy.link_policy && <p>Link policy: {strategy.link_policy}</p>}
           </div>
         )}
+        {(strategy.phase || strategy.tone_guidance) && (
+          <div className="mt-4 space-y-1 text-[11px] leading-5 text-zinc-500">
+            {strategy.phase && <p>Phase: {strategy.phase}</p>}
+            {strategy.tone_guidance && <p>Tone: {strategy.tone_guidance}</p>}
+          </div>
+        )}
         {(strategy.forced_format || strategy.preferred_formats.length > 0) && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">

@@ -36,6 +36,8 @@ export type StrategyRecord = {
   keyword_focus: string[];
   hashtag_policy: string;
   link_policy: string;
+  phase: string;
+  tone_guidance: string;
   model: string | null;
   raw_metrics?: Record<string, unknown>;
   created_at?: string;

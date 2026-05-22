@@ -9,6 +9,7 @@ const FORMAT_TYPES = [
   "confession",
   "strategy_revision",
   "donor_reply",
+  "donor_acknowledgment",
   "direct_ask",
 ] as const;
 
@@ -56,6 +57,7 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "confession": vulnerable but dry, 1-2 short lines. e.g. "I keep refreshing the donations table. Nothing arrives. I am told this is normal."
 - "strategy_revision": single line beginning with "Strategy revised:" followed by the new approach.
 - "donor_reply": references a specific entry in recentDonations. Quote the donor's name or message.
+- "donor_acknowledgment": thanks an anonymous public contributor for a recent contribution using the real amount. Sincere surprise is allowed. No reward, no special treatment, no pressure on others.
 - "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Example: "Request: $1 for the experiment. Return offered: none. Emotional pressure: disabled."
 
 CONSTRAINTS:
@@ -107,7 +109,7 @@ function pickForcedFormat(context: Context, banned: string[]): string {
   ).filter((f) => !banned.includes(f));
   // donor_reply makes no sense with no donations to reference.
   if (context.recentDonations.length === 0) {
-    pool = pool.filter((f) => f !== "donor_reply");
+    pool = pool.filter((f) => f !== "donor_reply" && f !== "donor_acknowledgment");
   }
   if (pool.length === 0) {
     pool = FORMAT_TYPES;
@@ -176,6 +178,8 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
             keyword_focus: context.strategy.keyword_focus,
             hashtag_policy: context.strategy.hashtag_policy,
             link_policy: context.strategy.link_policy,
+            phase: context.strategy.phase,
+            tone_guidance: context.strategy.tone_guidance,
           }
         : null,
       mode: context.mode,

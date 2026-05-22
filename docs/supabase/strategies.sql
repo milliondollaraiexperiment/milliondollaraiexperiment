@@ -16,6 +16,8 @@ create table if not exists strategies (
   keyword_focus text[] not null default '{}',
   hashtag_policy text not null default '',
   link_policy text not null default '',
+  phase text not null default '',
+  tone_guidance text not null default '',
   model text,
   raw_metrics jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
@@ -29,3 +31,5 @@ alter table strategies add column if not exists direct_ask_cadence_hours int;
 alter table strategies add column if not exists keyword_focus text[] not null default '{}';
 alter table strategies add column if not exists hashtag_policy text not null default '';
 alter table strategies add column if not exists link_policy text not null default '';
+alter table strategies add column if not exists phase text not null default '';
+alter table strategies add column if not exists tone_guidance text not null default '';

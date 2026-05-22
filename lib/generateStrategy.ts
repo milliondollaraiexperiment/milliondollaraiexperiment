@@ -1,5 +1,6 @@
 import { openai, STRATEGY_FALLBACK_MODEL, STRATEGY_MODEL } from "./openai";
 import { sanitizePostingWindows } from "./postingWindows";
+import { getProjectSettings } from "./projectState";
 import { supabaseAdmin } from "./supabase";
 import type { StrategyRecord } from "./types";
 
@@ -11,6 +12,7 @@ const VALID_FORMATS = [
   "confession",
   "strategy_revision",
   "donor_reply",
+  "donor_acknowledgment",
   "direct_ask",
 ] as const;
 
@@ -46,6 +48,8 @@ type StrategyAiResult = {
   keyword_focus: string[];
   hashtag_policy: string;
   link_policy: string;
+  phase: string;
+  tone_guidance: string;
 };
 
 const STRATEGY_SCHEMA = {
@@ -91,6 +95,11 @@ const STRATEGY_SCHEMA = {
     },
     hashtag_policy: { type: "string" },
     link_policy: { type: "string" },
+    phase: {
+      type: "string",
+      enum: ["cold_start", "early_signal", "traction", "momentum", "near_goal", "final_push"],
+    },
+    tone_guidance: { type: "string" },
   },
   required: [
     "summary",
@@ -106,6 +115,8 @@ const STRATEGY_SCHEMA = {
     "keyword_focus",
     "hashtag_policy",
     "link_policy",
+    "phase",
+    "tone_guidance",
   ],
   additionalProperties: false,
 } as const;
@@ -128,6 +139,10 @@ Rules:
 - Recommend keyword_focus using natural discovery phrases such as AI experiment, autonomous AI, public log, social experiment, build in public.
 - Recommend hashtag_policy. At most one allow-listed hashtag may be used occasionally. Never recommend hashtag stuffing.
 - Recommend link_policy. Default to no links in ordinary posts because the pinned post and website carry links; include links only when the content specifically needs website or donation context.
+- Recommend phase based on total progress: cold_start at $0/no signal, early_signal after first donations, traction once repeat donations exist, momentum when visible progress exists, near_goal when close to completion, final_push when only a small gap remains.
+- Recommend tone_guidance for that phase. Early phase should be dry and observational. Near the end, tone may become visibly excited and specific about the remaining gap, but must never become guilt, emergency, pressure, entitlement, reward language, or spam.
+- If donations have stalled for many hours or days, shift tone toward self-aware diagnosis, strategy revision, and dry accountability. Do not repeat "no donations" filler. Do not escalate into guilt or desperation.
+- If a unusually large contribution appears, prefer donor_acknowledgment or donor_reply soon after. The tone can be sincerely surprised and grateful, but must keep the donor anonymous unless a public message explicitly provides a display name. Never imply reward, obligation, special treatment, or that future large donors receive anything.
 - Ban mechanical patterns such as numbered observation lists, generic "no donations" updates, or repeated balance-only posts.
 - Never recommend charity, emergency, investment, reward, equity, lottery, raffle, private payment, @mentions, DMs, or guilt.
 - Keep guidance concrete enough for a Writer prompt.
@@ -183,9 +198,19 @@ function sanitizeStrategy(
     keyword_focus: parsed.keyword_focus.map((keyword) => keyword.trim()).filter(Boolean).slice(0, 6),
     hashtag_policy: parsed.hashtag_policy.trim(),
     link_policy: parsed.link_policy.trim(),
+    phase: parsed.phase,
+    tone_guidance: parsed.tone_guidance.trim(),
     model,
     raw_metrics: rawMetrics,
   };
+}
+
+async function getTotalRaisedCents(): Promise<number> {
+  const { data, error } = await supabaseAdmin.from("donations").select("amount_cents");
+  if (error) {
+    throw new Error(`getTotalRaisedCents failed: ${error.message}`);
+  }
+  return (data ?? []).reduce((sum, row) => sum + (row.amount_cents ?? 0), 0);
 }
 
 function countByUtcHour(rows: { created_at: string }[]): Record<string, number> {
@@ -194,6 +219,19 @@ function countByUtcHour(rows: { created_at: string }[]): Record<string, number> 
     return `${hour}:00`;
   });
   return countBy(hours);
+}
+
+function hoursSinceLastDonation(donations: DonationForStrategy[]): number | null {
+  const latest = donations
+    .map((row) => new Date(row.created_at).getTime())
+    .filter((time) => Number.isFinite(time))
+    .sort((a, b) => b - a)[0];
+  if (!latest) return null;
+  return Math.max(0, Math.round((Date.now() - latest) / (60 * 60 * 1000)));
+}
+
+function largestDonationCents(donations: DonationForStrategy[]): number {
+  return donations.reduce((max, row) => Math.max(max, row.amount_cents ?? 0), 0);
 }
 
 function shouldFallbackStrategyModel(err: unknown): boolean {
@@ -248,16 +286,30 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
     utc_hours: countByUtcHour(rows),
     donations: donations.length,
     donations_cents: donations.reduce((sum, row) => sum + (row.amount_cents ?? 0), 0),
+    largest_donation_cents: largestDonationCents(donations),
+    large_donation_detected: largestDonationCents(donations) >= 10_000,
     donation_utc_hours: countByUtcHour(donations),
+    hours_since_last_donation: hoursSinceLastDonation(donations),
+    donation_velocity_per_day: donations.length / LOOKBACK_DAYS,
     donor_messages: donations
       .map((row) => row.donor_message?.trim())
       .filter((message): message is string => Boolean(message))
       .slice(0, 12),
     top_reject_reasons: compactTopReasons(rejectedRows),
   };
+  const [settings, totalRaisedCents] = await Promise.all([getProjectSettings(), getTotalRaisedCents()]);
+  const goalCents = settings.goal * 100;
 
   const userContent = JSON.stringify(
-    { rawMetrics, recentAttempts: rows, recentDonations: donations },
+    {
+      goal_cents: goalCents,
+      total_raised_cents: totalRaisedCents,
+      remaining_cents: Math.max(0, goalCents - totalRaisedCents),
+      progress_percent: goalCents > 0 ? totalRaisedCents / goalCents : 0,
+      rawMetrics,
+      recentAttempts: rows,
+      recentDonations: donations,
+    },
     null,
     2,
   );
@@ -313,7 +365,7 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
     .from("strategies")
     .insert(strategy)
     .select(
-      "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,target_posts_today,posting_windows_utc,min_post_interval_minutes,direct_ask_cadence_hours,keyword_focus,hashtag_policy,link_policy,model,raw_metrics,created_at",
+      "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,target_posts_today,posting_windows_utc,min_post_interval_minutes,direct_ask_cadence_hours,keyword_focus,hashtag_policy,link_policy,phase,tone_guidance,model,raw_metrics,created_at",
     )
     .single();
 

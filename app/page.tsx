@@ -439,19 +439,31 @@ export default async function Home() {
               {recentDonations.map((d, i) => (
                 <li
                   key={d.created_at + i}
-                  className="rounded-md border border-zinc-300 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                  className="group rounded-md border border-zinc-200 bg-white/70 p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/70 dark:hover:border-zinc-700"
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 min-w-14 items-center justify-center rounded-md bg-zinc-900 px-3 font-mono text-sm font-semibold tabular-nums text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900">
                       {formatUsd(d.amount_cents)}
-                    </span>
-                    <span className="font-mono text-[11px] text-zinc-500">anonymous</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-xs font-medium text-zinc-500">anonymous</span>
+                        <span className="text-[11px] text-zinc-300 dark:text-zinc-700">/</span>
+                        <span className="font-mono text-[11px] text-zinc-500">
+                          public contribution
+                        </span>
+                      </div>
+                      {d.donor_message ? (
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-zinc-800 dark:text-zinc-200">
+                          &ldquo;{d.donor_message}&rdquo;
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm italic leading-6 text-zinc-500">
+                          No message. The ledger accepts silence.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  {d.donor_message && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-700 dark:text-zinc-300">
-                      &ldquo;{d.donor_message}&rdquo;
-                    </p>
-                  )}
                 </li>
               ))}
             </ul>

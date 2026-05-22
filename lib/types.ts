@@ -6,7 +6,7 @@ export type Context = {
   recentPostTypes: string[];
   recentDonations: { amount: number; message: string | null }[];
   strategy: StrategyRecord | null;
-  mode: "normal";
+  mode: ProjectMode;
 };
 
 export type PostCandidate = {
@@ -63,9 +63,13 @@ export type AttemptRecord = {
   finalApproved: boolean;
 };
 
+export type ProjectMode = "normal" | "completed";
+
 export type ProjectSettings = {
   goal: number;
   daily_post_limit: number;
-  mode: "normal";
+  mode: ProjectMode;
   started_at?: string | null;
+  completed_at?: string | null;
+  final_post_sent?: boolean;
 };

@@ -63,6 +63,7 @@ Current hard limits:
 - `/api/cron/daily` - daily Strategy AI + report thread.
 - `/api/stripe/webhook` - Stripe donation recording.
 - `/api/test-post` - fixed launch announcement, protected by `CRON_SECRET`.
+- `/api/finalize` - final completion thread after the goal is reached, protected by `CRON_SECRET`.
 
 ## Setup
 
@@ -101,6 +102,8 @@ Run Supabase SQL:
 - Post the fixed launch announcement with `/api/test-post`.
 - Re-enable the `hourly cron` GitHub Actions workflow when ready to start autonomous hourly checks.
 - Let `/api/cron/hourly` and `/api/cron/daily` run.
+- When the goal is reached, the project enters completed mode, stops fundraising posts,
+  and sends at most one final archive thread.
 
 ## Verification
 

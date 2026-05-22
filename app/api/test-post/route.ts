@@ -1,15 +1,9 @@
 import { postToX } from "@/lib/postToX";
+import { FALLBACK_PROJECT_SETTINGS, normalizeProjectSettings } from "@/lib/projectState";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { ProjectSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const FALLBACK_SETTINGS: ProjectSettings = {
-  goal: 1_000_000,
-  daily_post_limit: 8,
-  mode: "normal",
-  started_at: null,
-};
 
 async function markExperimentStarted() {
   const { data, error } = await supabaseAdmin
@@ -22,11 +16,14 @@ async function markExperimentStarted() {
     throw new Error(`markExperimentStarted read failed: ${error.message}`);
   }
 
-  const current = (data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
+  const current = normalizeProjectSettings(data?.value as Partial<ProjectSettings> | undefined);
   const next: ProjectSettings = {
-    ...FALLBACK_SETTINGS,
+    ...FALLBACK_PROJECT_SETTINGS,
     ...current,
+    mode: "normal",
     started_at: new Date().toISOString(),
+    completed_at: null,
+    final_post_sent: false,
   };
 
   const { error: upsertError } = await supabaseAdmin

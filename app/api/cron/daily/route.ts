@@ -7,6 +7,8 @@ import { hardBlock } from "@/lib/hardBlock";
 import { postThreadToX } from "@/lib/postToX";
 import { getDailyPostLimit, getTodayPostedCount } from "@/lib/rateLimit";
 import { supabaseAdmin } from "@/lib/supabase";
+import { FINAL_THREAD_POSTS } from "@/lib/finalThread";
+import { getCompletionState, markProjectCompleted } from "@/lib/projectState";
 import type { AttemptStatus, HardBlockResult, SafetyResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +40,55 @@ export async function GET(req: Request) {
   }
 
   try {
+    const completion = await getCompletionState();
+    if (completion.completed) {
+      const settings =
+        completion.settings.mode === "completed"
+          ? completion.settings
+          : await markProjectCompleted(completion.settings);
+
+      if (settings.final_post_sent) {
+        return Response.json({
+          status: "skipped",
+          reason: "project completed and final thread already sent",
+        });
+      }
+
+      const dryRun = process.env.DRY_RUN === "true";
+      const ids = dryRun ? null : await postThreadToX([...FINAL_THREAD_POSTS]);
+      const status: AttemptStatus = dryRun || !ids?.length ? "logged_only" : "posted";
+
+      const { data, error } = await supabaseAdmin
+        .from("attempts")
+        .insert({
+          hour_number: null,
+          post_type: "final_report_thread",
+          text: FINAL_THREAD_POSTS.join("\n\n---\n\n"),
+          status,
+          safety_score: 0,
+          safety_reasons: [],
+          hard_block_reason: null,
+          x_post_id: ids?.join(",") ?? null,
+          public_strategy_note: "Final archive thread after the experiment reached its goal.",
+          error_message: null,
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        throw new Error(`final report insert failed: ${error.message}`);
+      }
+
+      await markProjectCompleted(settings, { final_post_sent: true });
+      return Response.json({
+        status,
+        attempt_id: data.id,
+        posts: FINAL_THREAD_POSTS.length,
+        final: true,
+        dry_run: dryRun,
+      });
+    }
+
     let strategyId: string | null = null;
     try {
       const strategy = await generateAndSaveStrategy();

@@ -8,6 +8,7 @@ import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
 import { isWithinPostingWindows } from "@/lib/postingWindows";
+import { getCompletionState, markProjectCompleted } from "@/lib/projectState";
 import type { AttemptStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,19 @@ export async function GET(req: Request) {
   }
 
   try {
+    const completion = await getCompletionState();
+    if (completion.completed) {
+      if (completion.settings.mode !== "completed") {
+        await markProjectCompleted(completion.settings);
+      }
+      return Response.json({
+        status: "skipped",
+        reason: "project completed",
+        current_amount: completion.currentAmountCents / 100,
+        goal: completion.settings.goal,
+      });
+    }
+
     const context = await getContext();
     const postingWindows = context.strategy?.posting_windows_utc ?? [];
     if (!isWithinPostingWindows(postingWindows)) {

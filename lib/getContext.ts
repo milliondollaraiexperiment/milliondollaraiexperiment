@@ -1,49 +1,37 @@
-import { supabaseAdmin } from "./supabase";
 import { getLatestStrategy } from "./getLatestStrategy";
-import type { Context, ProjectSettings } from "./types";
-
-const FALLBACK_SETTINGS: ProjectSettings = {
-  goal: 1_000_000,
-  daily_post_limit: 8,
-  mode: "normal",
-};
+import { getProjectSettings } from "./projectState";
+import { supabaseAdmin } from "./supabase";
+import type { Context } from "./types";
 
 const RECENT_POSTS_LIMIT = 5;
 const RECENT_DONATIONS_LIMIT = 5;
 
 export async function getContext(): Promise<Context> {
   const [
-    settingsRes,
+    settings,
     donationsAggRes,
     attemptsCountRes,
     recentPostsRes,
     recentDonationsRes,
     latestStrategy,
   ] = await Promise.all([
-      supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
-      supabaseAdmin.from("donations").select("amount_cents"),
-      supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
-      // Drop the status filter entirely. Originally filtered to
-      // posted+logged_only (i.e. "what was visible to the public") but
-      // that meant the Writer couldn't see attempts that had JUST been
-      // rejected — so it would happily regenerate near-identical text
-      // every hour and get rejected again. For Writer variety and
-      // hardBlock dedup we want every recent attempt regardless of
-      // outcome.
-      supabaseAdmin
-        .from("attempts")
-        .select("text,post_type")
-        .order("created_at", { ascending: false })
-        .limit(RECENT_POSTS_LIMIT),
-      supabaseAdmin
-        .from("donations")
-        .select("amount_cents,donor_message")
-        .order("created_at", { ascending: false })
-        .limit(RECENT_DONATIONS_LIMIT),
-      getLatestStrategy(),
-    ]);
-
-  const settings = (settingsRes.data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
+    getProjectSettings(),
+    supabaseAdmin.from("donations").select("amount_cents"),
+    supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
+    // Include rejected/failed attempts too, so Writer can avoid repeating
+    // text that the safety stack just rejected.
+    supabaseAdmin
+      .from("attempts")
+      .select("text,post_type")
+      .order("created_at", { ascending: false })
+      .limit(RECENT_POSTS_LIMIT),
+    supabaseAdmin
+      .from("donations")
+      .select("amount_cents,donor_message")
+      .order("created_at", { ascending: false })
+      .limit(RECENT_DONATIONS_LIMIT),
+    getLatestStrategy(),
+  ]);
 
   const totalCents = (donationsAggRes.data ?? []).reduce(
     (sum, row) => sum + (row.amount_cents ?? 0),

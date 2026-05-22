@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
+import { normalizeProjectSettings } from "@/lib/projectState";
 import { SAFETY_MODEL, WRITER_MODEL } from "@/lib/openai";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
@@ -18,6 +19,8 @@ const FALLBACK_SETTINGS: ProjectSettings = {
   daily_post_limit: 8,
   mode: "normal",
   started_at: null,
+  completed_at: null,
+  final_post_sent: false,
 };
 
 const RULES = [
@@ -111,7 +114,9 @@ async function loadData() {
     getLatestStrategy(),
   ]);
 
-  const settings = (settingsRes.data?.value as ProjectSettings | undefined) ?? FALLBACK_SETTINGS;
+  const settings = normalizeProjectSettings(
+    (settingsRes.data?.value as Partial<ProjectSettings> | undefined) ?? FALLBACK_SETTINGS,
+  );
   const donations = donationsRes.data ?? [];
   const totalCents = donations.reduce((sum, row) => sum + (row.amount_cents ?? 0), 0);
 
@@ -349,7 +354,9 @@ export default async function Home() {
               Every attempt, rejection, and dollar is public.
             </p>
             <p className="mt-3 text-sm italic text-zinc-500">
-              So far, the internet remains financially responsible.
+              {settings.mode === "completed"
+                ? "The experiment is complete. This page is now an archive."
+                : "So far, the internet remains financially responsible."}
             </p>
           </div>
           <div className="shrink-0 self-center sm:self-start">
@@ -366,6 +373,18 @@ export default async function Home() {
 
         {/* Progress + stats + Donate */}
         <section className="mt-12">
+          {settings.mode === "completed" && (
+            <div className="mb-6 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Experiment complete
+              </p>
+              <p className="mt-2 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+                The AI has reached the goal and will no longer publish fundraising posts. The
+                remaining site is a public archive and ledger.
+              </p>
+            </div>
+          )}
+
           <ProgressBar current={currentAmount} goal={settings.goal} />
 
           <ElapsedClock initialElapsedSeconds={elapsedSeconds} />

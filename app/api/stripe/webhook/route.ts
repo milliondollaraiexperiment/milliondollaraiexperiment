@@ -1,12 +1,11 @@
 import type Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-const SIGNING_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-
 export async function POST(req: Request) {
+  const SIGNING_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   if (!SIGNING_SECRET) {
     return Response.json(
       { error: "STRIPE_WEBHOOK_SECRET not configured on the server" },
@@ -18,6 +17,14 @@ export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature");
   if (!sig) {
     return Response.json({ error: "Missing stripe-signature header" }, { status: 400 });
+  }
+
+  let stripe: Stripe;
+  try {
+    stripe = getStripe();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: message }, { status: 500 });
   }
 
   let event: Stripe.Event;

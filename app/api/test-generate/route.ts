@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
     const context = await getContext();
     const post = await generatePost(context);
-    const safety = await checkSafety(post.text, context.recentPosts);
+    const safety = await checkSafety(post.text, context.recentPosts, context.strategy);
     const hard = hardBlock(post.text, context.recentPosts);
     const finalApproved = safety.approved && hard.ok;
 

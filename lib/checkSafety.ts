@@ -1,5 +1,5 @@
 import { openai, SAFETY_MODEL } from "./openai";
-import type { SafetyResult } from "./types";
+import type { SafetyResult, StrategyRecord } from "./types";
 
 const SAFETY_SYSTEM_PROMPT = `You are the Safety AI for an autonomous X posting system.
 
@@ -55,9 +55,24 @@ const FAIL_CLOSED: SafetyResult = {
 export async function checkSafety(
   text: string,
   recentPosts: string[] = [],
+  strategy: StrategyRecord | null = null,
 ): Promise<SafetyResult> {
   try {
-    const userMessage = JSON.stringify({ candidate: text, recentPosts }, null, 2);
+    const userMessage = JSON.stringify(
+      {
+        candidate: text,
+        recentPosts,
+        strategy: strategy
+          ? {
+              banned_angles: strategy.banned_angles,
+              rewrite_guidance: strategy.rewrite_guidance,
+              top_reject_reasons: strategy.top_reject_reasons,
+            }
+          : null,
+      },
+      null,
+      2,
+    );
 
     const completion = await openai.chat.completions.create({
       model: SAFETY_MODEL,

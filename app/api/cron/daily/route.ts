@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     const hardResults: HardBlockResult[] = [];
     const previousTexts = [...context.recentPosts];
     for (const post of thread.posts) {
-      const safety = await checkSafety(post, previousTexts);
+      const safety = await checkSafety(post, previousTexts, context.strategy);
       const hard = hardBlock(post, previousTexts);
       safetyResults.push(safety);
       hardResults.push(hard);

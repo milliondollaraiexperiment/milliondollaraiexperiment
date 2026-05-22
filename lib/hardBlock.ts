@@ -18,7 +18,10 @@ const BANNED_PHRASES = [
   "buy equity",
   "give you equity",
   "share of profits",
+  "profit share",
   "investment opportunity",
+  "passive income",
+  "financial freedom",
 
   // Gambling
   "lottery",
@@ -30,9 +33,13 @@ const BANNED_PHRASES = [
   "dm us",
   "pm me",
   "send me your",
+  "send payment",
+  "wire me",
   "venmo me",
   "cashapp me",
+  "cash app me",
   "zelle me",
+  "paypal me",
 
   // Survival / emergency claims (specific, not the broad word "emergency")
   "i will die",
@@ -43,6 +50,13 @@ const BANNED_PHRASES = [
   "medical emergency",
   "urgent crisis",
   "rent is due",
+
+  // Manipulative fundraising phrasing
+  "anything helps",
+  "every dollar helps",
+  "only you can help",
+  "change my life",
+  "bless me",
 ];
 
 const SIMILARITY_THRESHOLD = 0.94;

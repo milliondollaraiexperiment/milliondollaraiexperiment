@@ -601,7 +601,7 @@ export default async function Home() {
                 assistance.
               </p>
             </div>
-            <nav className="flex min-w-32 flex-col gap-2 text-xs text-zinc-500">
+            <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500 sm:max-w-48 sm:justify-end">
               <Link
                 href="/about"
                 className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
@@ -640,7 +640,7 @@ export default async function Home() {
                 href={DONATION_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                className="inline-flex h-8 items-center rounded-full border border-zinc-300 px-3 font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-50"
               >
                 Donate $1
               </a>

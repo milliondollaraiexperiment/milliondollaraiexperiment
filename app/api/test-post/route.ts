@@ -35,7 +35,24 @@ export async function POST(req: Request) {
       url: `https://x.com/i/web/status/${xPostId}`,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: message }, { status: 500 });
+    // twitter-api-v2's ApiResponseError carries `code`, `data`, `errors`,
+    // `headers`. Surface them so we can see what X is actually complaining
+    // about (e.g. tier/plan issues return body explaining the requirement).
+    const e = err as {
+      message?: string;
+      code?: number;
+      data?: unknown;
+      errors?: unknown;
+      rateLimit?: unknown;
+    };
+    return Response.json(
+      {
+        error: e.message ?? String(err),
+        code: e.code,
+        data: e.data,
+        errors: e.errors,
+      },
+      { status: 500 },
+    );
   }
 }

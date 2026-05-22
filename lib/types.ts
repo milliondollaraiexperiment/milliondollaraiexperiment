@@ -3,6 +3,7 @@ export type Context = {
   currentAmount: number;
   hourNumber: number;
   recentPosts: string[];
+  recentPostTypes: string[];
   recentDonations: { amount: number; message: string | null }[];
   mode: "normal";
 };

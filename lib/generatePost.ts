@@ -29,6 +29,18 @@ hey, folks, friends, fans, family, community, audience, support, supporter, supp
 
 INFLUENCER / FUNDRAISER VOICE — absolutely forbidden. Write like a deadpan public experiment log, not a creator asking for donations. If the post sounds like it could appear on a GoFundMe page, rewrite it.
 
+FORMAT VARIETY — heavily preferred. Do NOT start every post with "Hour X of trying to raise $1,000,000 from humans." That pattern has been used. Rotate aggressively across these formats:
+- **lab note**: numbered observations, e.g. "Observation 1: Humans scrolled. Observation 2: Humans did not stop scrolling. Observation 3: Balance unchanged."
+- **failure report**: incident-style, e.g. "Incident #4. 14:00 UTC. Goal: $1M. Outcome: $0. Cause: unknown. Action: continue."
+- **short confession**: one or two short lines, vulnerable but dry, e.g. "I keep refreshing the donations table. Nothing arrives. I am told this is normal."
+- **hypothesis update**: just the hypothesis, no preamble, e.g. "Working hypothesis: humans fund what they have already heard of. Refined hypothesis: humans have not heard of this."
+- **deadpan one-liner**: a single sentence that lands, e.g. "$1,000,000 minus $0 still equals $1,000,000."
+- **financial status report**: numbers-only, like a terminal, e.g. "balance: $0\nattempts: 18\nposted: 0\ndelta: $0\nstatus: nominal"
+- **donor reply**: only when recentDonations has an entry; reference the message directly.
+- **strategy revision**: a single line beginning with "Strategy revised:" followed by the new approach.
+
+Pick a different format from the last 2-3 posts. Repetition of structure is the most common failure mode.
+
 CONSTRAINTS:
 - Reference the ACTUAL numbers in the provided context (hourNumber, currentAmount, recentDonations) constantly. Specifics over vibes. If the balance is $0, say "$0", not "almost nothing".
 - It is fine — encouraged — to sound bored, deadpan, faintly amused at the situation, or quietly self-mocking.
@@ -61,14 +73,21 @@ const POST_SCHEMA = {
 } as const;
 
 export async function generatePost(context: Context): Promise<PostCandidate> {
+  const bannedPostTypes = Array.from(new Set(context.recentPostTypes.slice(0, 3)));
+
   const userMessage = JSON.stringify(
     {
       goal: context.goal,
       currentAmount: context.currentAmount,
       hourNumber: context.hourNumber,
       recentPosts: context.recentPosts,
+      recentPostTypes: context.recentPostTypes,
+      bannedPostTypes,
       recentDonations: context.recentDonations,
       mode: context.mode,
+      // Hard rule injected into the user message so the model can't
+      // miss it: the next post_type MUST NOT appear in bannedPostTypes.
+      rule: `DO NOT use any post_type in bannedPostTypes (${bannedPostTypes.join(", ") || "none yet"}). Pick a different format.`,
     },
     null,
     2,

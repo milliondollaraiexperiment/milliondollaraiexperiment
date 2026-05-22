@@ -216,10 +216,10 @@ export default async function Home() {
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              Donate (you pick the amount)
+              Donate $1
             </a>
             <span className="text-xs text-zinc-500">
-              Voluntary. Non-refundable. No rewards.
+              Voluntary contribution. No rewards or returns.
             </span>
           </div>
         </section>

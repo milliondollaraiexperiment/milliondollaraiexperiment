@@ -16,14 +16,16 @@ export async function getContext(): Promise<Context> {
       supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
       supabaseAdmin.from("donations").select("amount_cents"),
       supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
-      // Include logged_only so the Writer and hardBlock dedup see attempts
-      // that ran in DRY_RUN mode. Until DRY_RUN flips to false in Phase 5,
-      // there are zero `posted` rows — without this widening, dedup is
-      // effectively disabled.
+      // Drop the status filter entirely. Originally filtered to
+      // posted+logged_only (i.e. "what was visible to the public") but
+      // that meant the Writer couldn't see attempts that had JUST been
+      // rejected — so it would happily regenerate near-identical text
+      // every hour and get rejected again. For Writer variety and
+      // hardBlock dedup we want every recent attempt regardless of
+      // outcome.
       supabaseAdmin
         .from("attempts")
-        .select("text")
-        .in("status", ["posted", "logged_only"])
+        .select("text,post_type")
         .order("created_at", { ascending: false })
         .limit(RECENT_POSTS_LIMIT),
       supabaseAdmin
@@ -42,7 +44,11 @@ export async function getContext(): Promise<Context> {
 
   const hourNumber = (attemptsCountRes.count ?? 0) + 1;
 
-  const recentPosts = (recentPostsRes.data ?? []).map((row) => row.text);
+  const recentRows = recentPostsRes.data ?? [];
+  const recentPosts = recentRows.map((row) => row.text);
+  const recentPostTypes = recentRows
+    .map((row) => row.post_type as string | null)
+    .filter((t): t is string => typeof t === "string" && t.length > 0);
 
   const recentDonations = (recentDonationsRes.data ?? []).map((row) => ({
     amount: (row.amount_cents ?? 0) / 100,
@@ -54,6 +60,7 @@ export async function getContext(): Promise<Context> {
     currentAmount: totalCents / 100,
     hourNumber,
     recentPosts,
+    recentPostTypes,
     recentDonations,
     mode: settings.mode,
   };

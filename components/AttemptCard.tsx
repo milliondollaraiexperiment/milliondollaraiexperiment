@@ -1,0 +1,94 @@
+type Variant = "posted" | "logged_only" | "rejected" | "failed";
+
+type AttemptCardProps = {
+  hour_number: number | null;
+  text: string;
+  created_at: string;
+  variant: Variant;
+  safety_reasons?: string[] | null;
+  hard_block_reason?: string | null;
+  public_strategy_note?: string | null;
+  error_message?: string | null;
+};
+
+const badgeStyles: Record<Variant, string> = {
+  posted: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400",
+  logged_only: "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400",
+  rejected: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400",
+  failed: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400",
+};
+
+const badgeLabel: Record<Variant, string> = {
+  posted: "posted to X",
+  logged_only: "logged only",
+  rejected: "rejected",
+  failed: "failed",
+};
+
+function formatTs(iso: string) {
+  const d = new Date(iso);
+  return d.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+}
+
+export function AttemptCard({
+  hour_number,
+  text,
+  created_at,
+  variant,
+  safety_reasons,
+  hard_block_reason,
+  public_strategy_note,
+  error_message,
+}: AttemptCardProps) {
+  const muted = variant === "rejected" || variant === "failed";
+  return (
+    <article className="rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <header className="mb-2 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-mono text-zinc-500">
+          <span>{hour_number != null ? `Hour ${hour_number}` : "—"}</span>
+          <span>·</span>
+          <span>{formatTs(created_at)}</span>
+        </div>
+        <span className={`rounded px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${badgeStyles[variant]}`}>
+          {badgeLabel[variant]}
+        </span>
+      </header>
+
+      {text ? (
+        <p className={`whitespace-pre-wrap font-mono text-sm leading-6 ${muted ? "text-zinc-500" : "text-zinc-900 dark:text-zinc-100"}`}>
+          {text}
+        </p>
+      ) : (
+        <p className="font-mono text-xs italic text-zinc-500">(no text — orchestrator failed before generation)</p>
+      )}
+
+      {(safety_reasons?.length || hard_block_reason) && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {safety_reasons?.map((r, i) => (
+            <span
+              key={`s-${i}`}
+              className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-400"
+            >
+              {r}
+            </span>
+          ))}
+          {hard_block_reason && (
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
+              hardBlock: {hard_block_reason}
+            </span>
+          )}
+        </div>
+      )}
+
+      {error_message && (
+        <p className="mt-3 truncate font-mono text-xs text-amber-700 dark:text-amber-400" title={error_message}>
+          error: {error_message.slice(0, 200)}
+        </p>
+      )}
+
+      {public_strategy_note && !muted && (
+        <p className="mt-3 text-xs italic text-zinc-500">{public_strategy_note}</p>
+      )}
+    </article>
+  );
+}

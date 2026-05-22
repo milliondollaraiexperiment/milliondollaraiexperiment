@@ -1,0 +1,35 @@
+name: hourly cron
+
+# Vercel Hobby limits crons to daily. This workflow is the actual hourly
+# trigger in production until Vercel is upgraded.
+#
+# Required repo secrets:
+#   CRON_SECRET    — same value as the Vercel env var
+#   PRODUCTION_URL — e.g. https://milliondollaraiexperiment.vercel.app (no trailing slash)
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  fire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: hit /api/cron/hourly
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$PRODUCTION_URL" ]; then
+            echo "Missing CRON_SECRET or PRODUCTION_URL secret — configure them in repo settings."
+            exit 78  # neutral skip
+          fi
+          response=$(curl -sS -o /tmp/body -w "%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$PRODUCTION_URL/api/cron/hourly")
+          echo "HTTP $response"
+          cat /tmp/body
+          # Fail the job on non-2xx so we get an email / red badge
+          [ "$response" -ge 200 ] && [ "$response" -lt 300 ]

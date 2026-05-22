@@ -68,7 +68,11 @@ export async function GET(req: Request) {
       getTodayPostedCount(),
       getDailyPostLimit(),
     ]);
-    const underDailyLimit = todayPostedCount < dailyLimit;
+    const strategyTarget = context.strategy?.target_posts_today;
+    const effectiveDailyLimit = strategyTarget
+      ? Math.min(dailyLimit, strategyTarget)
+      : dailyLimit;
+    const underDailyLimit = todayPostedCount < effectiveDailyLimit;
     const dryRun = process.env.DRY_RUN === "true";
     const safe = safety.approved && hard.ok;
 
@@ -96,7 +100,9 @@ export async function GET(req: Request) {
       attempt_id: saved.id,
       hour_number: context.hourNumber,
       today_posted_count: todayPostedCount,
-      daily_limit: dailyLimit,
+      daily_limit: effectiveDailyLimit,
+      settings_daily_limit: dailyLimit,
+      strategy_target_posts_today: strategyTarget ?? null,
       dry_run: dryRun,
     });
   } catch (err) {

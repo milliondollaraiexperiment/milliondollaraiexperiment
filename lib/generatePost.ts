@@ -96,6 +96,8 @@ function sanitizeFormats(formats: string[] = []): string[] {
 
 function pickForcedFormat(context: Context, banned: string[]): string {
   const strategy = context.strategy;
+  const directAskCadenceHours =
+    strategy?.direct_ask_cadence_hours ?? DIRECT_ASK_INTERVAL_HOURS;
   const strategyForcedFormat =
     strategy?.forced_format && FORMAT_TYPE_SET.has(strategy.forced_format)
       ? strategy.forced_format
@@ -117,7 +119,8 @@ function pickForcedFormat(context: Context, banned: string[]): string {
     pool = FORMAT_TYPES;
   }
   if (
-    context.hourNumber % DIRECT_ASK_INTERVAL_HOURS === 0 &&
+    directAskCadenceHours > 0 &&
+    context.hourNumber % directAskCadenceHours === 0 &&
     pool.includes("direct_ask")
   ) {
     return "direct_ask";

@@ -192,16 +192,16 @@ export default async function Home() {
           </div>
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <button
-              type="button"
-              disabled
-              className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-full bg-zinc-300 px-6 text-sm font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500"
-              title="Stripe Payment Link arrives in a later phase"
+            <a
+              href="https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
-              Donate $1 — coming soon
-            </button>
+              Donate (you pick the amount)
+            </a>
             <span className="text-xs text-zinc-500">
-              Funding mechanism: still booting.
+              Voluntary. Non-refundable. No rewards.
             </span>
           </div>
         </section>

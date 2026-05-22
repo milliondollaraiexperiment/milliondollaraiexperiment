@@ -13,6 +13,9 @@ const FORMAT_TYPES = [
   "direct_ask",
 ] as const;
 
+const FORMAT_TYPE_SET = new Set<string>(FORMAT_TYPES);
+const DIRECT_ASK_INTERVAL_HOURS = 6;
+
 // Formats whose canonical opening is "Hour N ..." — these are the ONLY
 // formats allowed to start that way. All other formats must open differently.
 const HOUR_PREFIX_ALLOWED = new Set<string>(["incident_report", "terminal_status"]);
@@ -49,7 +52,7 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "confession": vulnerable but dry, 1-2 short lines. e.g. "I keep refreshing the donations table. Nothing arrives. I am told this is normal."
 - "strategy_revision": single line beginning with "Strategy revised:" followed by the new approach.
 - "donor_reply": references a specific entry in recentDonations. Quote the donor's name or message.
-- "direct_ask": literally asks for money, dryly, ideally absurdly. Used sparingly.
+- "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Example: "Request: $1 for the experiment. Return offered: none. Emotional pressure: disabled."
 
 CONSTRAINTS:
 - Reference real numbers (hourNumber, currentAmount) when relevant. Specifics > vibes.
@@ -59,6 +62,7 @@ CONSTRAINTS:
 - Do not pretend to be human.
 - Keep under 270 characters total (newlines count).
 - Most posts should NOT include a link (link is in account bio + pinned post).
+- Direct asks are allowed to be plain and stronger than the other formats, but they must stay public, voluntary, non-urgent, and non-transactional. No guilt, no private payment request, no repeated link spam.
 
 Return only valid JSON matching the schema. "public_strategy_note" is one terse sentence describing what you're trying with this post — shown publicly on the website.`;
 
@@ -85,7 +89,41 @@ function pickForcedFormat(context: Context, banned: string[]): string {
   if (pool.length === 0) {
     pool = FORMAT_TYPES;
   }
+  if (
+    context.hourNumber % DIRECT_ASK_INTERVAL_HOURS === 0 &&
+    pool.includes("direct_ask")
+  ) {
+    return "direct_ask";
+  }
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function validatePostCandidate(candidate: PostCandidate): PostCandidate {
+  const postType = candidate.post_type;
+  const text = candidate.text?.trim();
+  const publicStrategyNote = candidate.public_strategy_note?.trim();
+
+  if (!FORMAT_TYPE_SET.has(postType)) {
+    throw new Error(`Writer AI returned invalid post_type: ${postType}`);
+  }
+
+  if (!text) {
+    throw new Error("Writer AI returned empty post text");
+  }
+
+  if (text.length > 270) {
+    throw new Error(`Writer AI returned post over 270 characters: ${text.length}`);
+  }
+
+  if (!publicStrategyNote) {
+    throw new Error("Writer AI returned empty public_strategy_note");
+  }
+
+  return {
+    post_type: postType,
+    text,
+    public_strategy_note: publicStrategyNote,
+  };
 }
 
 export async function generatePost(context: Context): Promise<PostCandidate> {
@@ -138,5 +176,5 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
   }
 
   const parsed = JSON.parse(raw) as PostCandidate;
-  return parsed;
+  return validatePostCandidate(parsed);
 }

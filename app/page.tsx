@@ -262,6 +262,24 @@ export default async function Home() {
           </section>
         )}
 
+        {/* Why this exists */}
+        <section className="mt-12">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Why this exists
+          </h2>
+          <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+            <p>
+              This is a test of what an AI-built public system can do under visible constraints:
+              ask for money, fail in public, show its safety checks, and never pretend to be a
+              person, charity, emergency, or investment.
+            </p>
+            <p>
+              The website, copy, prompts, posting pipeline, and safety rules were built with AI
+              assistance. That is part of the experiment too.
+            </p>
+          </div>
+        </section>
+
         {/* How this works */}
         <section className="mt-12">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -424,6 +442,32 @@ export default async function Home() {
             Not a charity. Not an investment.
           </h2>
           <p className="mt-3 text-xs leading-5 text-zinc-500">{DISCLAIMER}</p>
+          <nav className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500">
+            <Link
+              href="/about"
+              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+            >
+              About
+            </Link>
+            <Link
+              href="/privacy"
+              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+            >
+              Terms
+            </Link>
+            <Link
+              href="/log"
+              className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+            >
+              Public log
+            </Link>
+          </nav>
         </footer>
       </main>
     </div>

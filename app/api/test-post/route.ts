@@ -11,8 +11,13 @@ export const dynamic = "force-dynamic";
 // harmless (anyone hitting it would need the secret), but feel free to
 // delete it once the first real Hour-N post lands.
 export async function POST(req: Request) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    return Response.json({ error: "CRON_SECRET not configured on the server" }, { status: 500 });
+  }
+
   const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (auth !== `Bearer ${cronSecret}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -6,6 +6,7 @@ import { saveAttempt } from "@/lib/saveAttempt";
 import { getTodayPostedCount, getDailyPostLimit } from "@/lib/rateLimit";
 import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getGenerationThrottleState } from "@/lib/generationThrottle";
 import type { AttemptStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,16 @@ export async function GET(req: Request) {
   }
 
   try {
+    const throttle = await getGenerationThrottleState();
+    if (throttle.shouldSkip) {
+      return Response.json({
+        status: "skipped",
+        reason: "generation interval not elapsed",
+        minutes_until_next: throttle.minutesUntilNext,
+        last_attempt_at: throttle.lastAttemptAt,
+      });
+    }
+
     const context = await getContext();
     const post = await generatePost(context);
     const safety = await checkSafety(post.text, context.recentPosts);

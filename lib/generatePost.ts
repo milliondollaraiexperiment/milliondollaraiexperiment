@@ -2,7 +2,6 @@ import { openai, WRITER_MODEL } from "./openai";
 import type { Context, PostCandidate } from "./types";
 
 const FORMAT_TYPES = [
-  "lab_note",
   "incident_report",
   "terminal_status",
   "one_liner",
@@ -50,7 +49,6 @@ hey, folks, friends, family, fans, community, audience, support, supporter, dona
 OPENING PHRASE RULE — do NOT begin the text with "Hour X of trying to raise $1,000,000..." unless forcedFormat is "incident_report" or "terminal_status". Every other format must open with a different first sentence.
 
 FORMATS — the user message will pass a forcedFormat. You MUST set post_type to that exact value AND write in that style:
-- "lab_note": numbered observations, e.g. "Observation 1: Humans scrolled. Observation 2: They did not stop."
 - "incident_report": incident-style, may include hour/timestamp, e.g. "Incident #4. 14:00 UTC. Outcome: $0. Cause: unknown."
 - "terminal_status": terminal/log-line output, numbers-heavy, e.g. "balance: $0\\nattempts: 18\\ndelta: $0\\nstatus: nominal".
 - "one_liner": a single deadpan sentence that lands. No multi-line.
@@ -69,6 +67,7 @@ CONSTRAINTS:
 - Keep under 270 characters total (newlines count).
 - Most posts should NOT include a link (link is in account bio + pinned post).
 - Direct asks are allowed to be plain and stronger than the other formats, but they must stay public, voluntary, non-urgent, and non-transactional. No guilt, no private payment request, no repeated link spam.
+- Do not write numbered observation lists. Avoid "Observation 1", "Observation 2", and similar lab-notebook filler.
 
 Return only valid JSON matching the schema. "public_strategy_note" is one terse sentence describing what you're trying with this post — shown publicly on the website.`;
 

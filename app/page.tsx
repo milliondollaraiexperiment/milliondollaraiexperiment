@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
-import { normalizeProjectSettings } from "@/lib/projectState";
+import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
 import { SAFETY_MODEL, WRITER_MODEL } from "@/lib/openai";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
@@ -23,6 +23,7 @@ const FALLBACK_SETTINGS: ProjectSettings = {
   goal: 1_000_000,
   daily_post_limit: 8,
   mode: "normal",
+  posting_paused: false,
   started_at: null,
   completed_at: null,
   final_post_sent: false,
@@ -39,6 +40,7 @@ const RULES = [
 type AttemptRow = {
   id: string;
   hour_number: number | null;
+  post_type: string | null;
   text: string;
   status: "posted" | "logged_only" | "rejected" | "failed";
   safety_reasons: string[] | null;
@@ -97,7 +99,7 @@ async function loadData() {
     supabaseAdmin
       .from("attempts")
       .select(
-        "id,hour_number,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
+        "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       )
       .in("status", ["posted", "logged_only"])
       .order("created_at", { ascending: false })
@@ -105,7 +107,7 @@ async function loadData() {
     supabaseAdmin
       .from("attempts")
       .select(
-        "id,hour_number,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
+        "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       )
       .eq("status", "rejected")
       .order("created_at", { ascending: false })
@@ -113,7 +115,7 @@ async function loadData() {
     supabaseAdmin
       .from("attempts")
       .select(
-        "id,hour_number,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
+        "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       )
       .eq("status", "failed")
       .order("created_at", { ascending: false })
@@ -241,7 +243,7 @@ function StrategyPillList({ items }: { items: string[] }) {
 }
 
 function HealthBadge({ status }: { status: string }) {
-  const warn = status !== "current" && status !== "healthy";
+  const warn = !["current", "healthy", "live", "completed"].includes(status);
   return (
     <span
       className={`rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
@@ -252,6 +254,29 @@ function HealthBadge({ status }: { status: string }) {
     >
       {status}
     </span>
+  );
+}
+
+function SystemStatus({ settings }: { settings: ProjectSettings }) {
+  const paused = isPostingPaused(settings);
+  const completed = settings.mode === "completed";
+  const label = completed ? "completed" : paused ? "paused" : "live";
+  const copy = completed
+    ? "The experiment is archived; autonomous contribution posts are stopped."
+    : paused
+      ? "Autonomous X posting is paused. The public ledger and payment webhook remain online."
+      : "Autonomous posting is live. The account is automated and managed by a human operator.";
+
+  return (
+    <section className="mt-8 rounded-md border border-zinc-200 bg-white/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+          System status
+        </h2>
+        <HealthBadge status={label} />
+      </div>
+      <p className="mt-2 text-xs leading-5 text-zinc-500">{copy}</p>
+    </section>
   );
 }
 
@@ -458,7 +483,7 @@ export default async function Home() {
                   Experiment complete
                 </p>
                 <p className="mt-2 text-sm leading-7 text-zinc-200">
-                  The AI reached the goal and will no longer publish fundraising posts. This page is
+                  The AI reached the goal and will no longer publish contribution posts. This page is
                   now a public archive and ledger.
                 </p>
               </div>
@@ -476,7 +501,7 @@ export default async function Home() {
           <div className="mt-6 grid grid-cols-3 gap-x-4 gap-y-5 border-b border-zinc-200 pb-5 sm:gap-x-6 dark:border-zinc-800">
             <Stat value={postedCount} label="successful posts" />
             <Stat value={rejectedCount} label="rejected attempts" />
-            <Stat value={donorCount} label="donors" />
+            <Stat value={donorCount} label="contributors" />
           </div>
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -505,6 +530,8 @@ export default async function Home() {
             </div>
           )}
         </section>
+
+        <SystemStatus settings={settings} />
 
         {/* Recent contributions (only if any) */}
         {recentDonations.length > 0 && (
@@ -647,6 +674,7 @@ export default async function Home() {
                 <AttemptCard
                   key={row.id}
                   hour_number={row.hour_number}
+                  post_type={row.post_type}
                   text={row.text}
                   created_at={row.created_at}
                   variant={row.status}
@@ -692,6 +720,7 @@ export default async function Home() {
                 <AttemptCard
                   key={row.id}
                   hour_number={row.hour_number}
+                  post_type={row.post_type}
                   text={row.text}
                   created_at={row.created_at}
                   variant="rejected"
@@ -718,6 +747,7 @@ export default async function Home() {
                 <AttemptCard
                   key={row.id}
                   hour_number={row.hour_number}
+                  post_type={row.post_type}
                   text={row.text}
                   created_at={row.created_at}
                   variant="failed"
@@ -749,6 +779,10 @@ export default async function Home() {
               <p className="mt-3 text-xs leading-5 text-zinc-500">
                 The site, copy, prompts, strategy loop, and posting pipeline were built with AI
                 assistance.
+              </p>
+              <p className="mt-3 text-xs leading-5 text-zinc-500">
+                The X account is automated and managed by a human operator. It does not auto-like,
+                auto-follow, DM, or tag strangers.
               </p>
             </div>
             <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500 sm:max-w-48 sm:justify-end">

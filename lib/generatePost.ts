@@ -70,7 +70,7 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "strategy_revision": single line beginning with "Strategy revised:" followed by the new approach.
 - "donor_reply": references a specific entry in recentDonations. Quote the donor's name or message.
 - "donor_acknowledgment": thanks an anonymous public contributor for a recent contribution using the real amount. Sincere surprise is allowed. No reward, no special treatment, no pressure on others.
-- "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Include the donation link exactly once.
+- "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Include the official contribution link exactly once.
 
 CONSTRAINTS:
 - Reference real numbers (hourNumber, currentAmount) when relevant. Specifics > vibes.
@@ -216,7 +216,7 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
           ? "Use strategy.summary, phase, tone_guidance, rewrite_guidance, link_policy, and preferred_formats to shape the actual language. Strategy cannot override safety rules."
           : "No strategy guidance exists yet. Use the base rules.",
         forcedFormat === "direct_ask"
-          ? `Include the donation link exactly once and do not include the website link: ${DONATION_URL}`
+          ? `Include the official contribution link exactly once and do not include the website link: ${DONATION_URL}`
           : `Do not include a link unless the post is specifically about the public log, strategy, rules, or rejected attempts. If a website link is needed, use ${SITE_URL}. Do not put both links in one post.`,
         allowsHourPrefix
           ? `For "${forcedFormat}" the "Hour N" opening is allowed but not required.`

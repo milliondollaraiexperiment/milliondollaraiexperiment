@@ -113,3 +113,22 @@ create table if not exists ai_health (
 insert into ai_health (component)
 values ('writer'), ('safety'), ('summary'), ('strategy')
 on conflict (component) do nothing;
+
+create table if not exists daily_runs (
+  id uuid primary key default gen_random_uuid(),
+  et_date text not null unique,
+  day_number int not null,
+  coverage_start timestamptz not null,
+  coverage_end timestamptz not null,
+  status text not null default 'running'
+    check (status in ('running', 'completed', 'failed')),
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  last_error text,
+  details jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists daily_runs_created_at_idx
+  on daily_runs (created_at desc);

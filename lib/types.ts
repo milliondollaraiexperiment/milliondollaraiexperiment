@@ -65,12 +65,13 @@ export type AttemptRecord = {
   finalApproved: boolean;
 };
 
-export type ProjectMode = "normal" | "completed";
+export type ProjectMode = "normal" | "paused" | "completed";
 
 export type ProjectSettings = {
   goal: number;
   daily_post_limit: number;
   mode: ProjectMode;
+  posting_paused?: boolean;
   started_at?: string | null;
   completed_at?: string | null;
   final_post_sent?: boolean;

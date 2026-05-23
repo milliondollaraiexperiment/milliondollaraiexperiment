@@ -29,6 +29,7 @@ const PAGE_LIMIT = 100;
 type AttemptRow = {
   id: string;
   hour_number: number | null;
+  post_type: string | null;
   text: string;
   status: "posted" | "logged_only" | "rejected" | "failed";
   safety_reasons: string[] | null;
@@ -48,7 +49,7 @@ async function loadAttempts(filter: StatusFilter) {
   let query = supabaseAdmin
     .from("attempts")
     .select(
-      "id,hour_number,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
+      "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       { count: "exact" },
     )
     .order("created_at", { ascending: false })
@@ -122,6 +123,7 @@ export default async function LogPage({
             <AttemptCard
               key={row.id}
               hour_number={row.hour_number}
+              post_type={row.post_type}
               text={row.text}
               created_at={row.created_at}
               variant={row.status}

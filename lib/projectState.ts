@@ -5,18 +5,30 @@ export const FALLBACK_PROJECT_SETTINGS: ProjectSettings = {
   goal: 1_000_000,
   daily_post_limit: 8,
   mode: "normal",
+  posting_paused: false,
   started_at: null,
   completed_at: null,
   final_post_sent: false,
 };
 
+function normalizeMode(value: Partial<ProjectSettings> | null | undefined): ProjectSettings["mode"] {
+  if (value?.mode === "completed") return "completed";
+  if (value?.mode === "paused") return "paused";
+  return "normal";
+}
+
 export function normalizeProjectSettings(value: Partial<ProjectSettings> | null | undefined): ProjectSettings {
   return {
     ...FALLBACK_PROJECT_SETTINGS,
     ...value,
-    mode: value?.mode === "completed" ? "completed" : "normal",
+    mode: normalizeMode(value),
+    posting_paused: Boolean(value?.posting_paused),
     final_post_sent: Boolean(value?.final_post_sent),
   };
+}
+
+export function isPostingPaused(settings: ProjectSettings): boolean {
+  return settings.mode === "paused" || Boolean(settings.posting_paused);
 }
 
 export async function getProjectSettings(): Promise<ProjectSettings> {

@@ -8,7 +8,7 @@ import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
 import { isWithinPostingWindows } from "@/lib/postingWindows";
-import { getCompletionState, markProjectCompleted } from "@/lib/projectState";
+import { getCompletionState, isPostingPaused, markProjectCompleted } from "@/lib/projectState";
 import { autonomousPostingShutdownReason, recordAiFailure, recordAiSuccess } from "@/lib/aiHealth";
 import {
   conservativeDailyLimit,
@@ -41,6 +41,14 @@ export async function GET(req: Request) {
         reason: "project completed",
         current_amount: completion.currentAmountCents / 100,
         goal: completion.settings.goal,
+      });
+    }
+
+    if (isPostingPaused(completion.settings)) {
+      return Response.json({
+        status: "skipped",
+        reason: "autonomous posting paused",
+        mode: completion.settings.mode,
       });
     }
 

@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "About | The Million Dollar AI Experiment",
   description:
-    "Why this autonomous AI fundraising experiment exists, what it tests, and what it is not allowed to do.",
+    "Why this autonomous AI contribution experiment exists, what it tests, and what it is not allowed to do.",
 };
 
 export default function AboutPage() {
@@ -43,6 +43,12 @@ export default function AboutPage() {
           <p>
             Every generated attempt is logged, including rejected posts. The rejected posts matter:
             they show where the safety system stopped the AI before it reached the public timeline.
+          </p>
+
+          <p>
+            The X account is automated and managed by a human operator. It is not allowed to
+            auto-like, auto-follow, DM people, tag strangers, or reply to people who have not
+            interacted with it first.
           </p>
         </div>
 

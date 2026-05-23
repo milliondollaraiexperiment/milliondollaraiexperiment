@@ -3,10 +3,11 @@ import { generateSummaryThread } from "@/lib/generateDailyReportThread";
 import { generateAndSaveStrategy } from "@/lib/generateStrategy";
 import { getContext } from "@/lib/getContext";
 import { hardBlock } from "@/lib/hardBlock";
-import { postThreadToX } from "@/lib/postToX";
+import { postThreadToX, XThreadPostError } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
 import { FINAL_THREAD_POSTS } from "@/lib/finalThread";
-import { getCompletionState, markProjectCompleted } from "@/lib/projectState";
+import { beginDailyRun, completeDailyRun, failDailyRun } from "@/lib/dailyRun";
+import { getCompletionState, isPostingPaused, markProjectCompleted } from "@/lib/projectState";
 import {
   getDailySummaryWindow,
   monthlyPeriodLabel,
@@ -54,6 +55,7 @@ async function insertFailedThreadAttempt(postType: SummaryPostType, message: str
 async function publishSummaryThread(
   postType: SummaryPostType,
   summary: DailySummaryRecord | PeriodSummaryRecord,
+  options: { allowXPost: boolean } = { allowXPost: true },
 ) {
   const context = await getContext();
   const [summaryHealth, safetyHealth] = await Promise.all([
@@ -111,12 +113,22 @@ async function publishSummaryThread(
 
   if (!safe) {
     status = "rejected";
-  } else if (dryRun) {
+  } else if (dryRun || !options.allowXPost) {
     status = "logged_only";
   } else {
-    ids = await postThreadToX(thread.posts);
-    status = ids?.length ? "posted" : "logged_only";
-    xPostId = ids?.join(",") ?? null;
+    try {
+      ids = await postThreadToX(thread.posts);
+      status = ids?.length ? "posted" : "logged_only";
+      xPostId = ids?.join(",") ?? null;
+    } catch (err) {
+      if (err instanceof XThreadPostError) {
+        ids = err.postedIds;
+        status = "failed";
+        xPostId = ids.length ? ids.join(",") : null;
+      } else {
+        throw err;
+      }
+    }
   }
 
   const { data, error } = await supabaseAdmin
@@ -131,7 +143,10 @@ async function publishSummaryThread(
       hard_block_reason: hard.ok ? null : hard.reason,
       x_post_id: xPostId,
       public_strategy_note: thread.public_strategy_note,
-      error_message: null,
+      error_message:
+        status === "failed"
+          ? `X thread partially failed after ${ids?.length ?? 0} posts. Posted ids recorded to prevent blind retry.`
+          : null,
     })
     .select("id")
     .single();
@@ -161,6 +176,7 @@ export async function GET(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  let dailyRunId: string | null = null;
   try {
     const completion = await getCompletionState();
     if (completion.completed) {
@@ -177,8 +193,24 @@ export async function GET(req: Request) {
       }
 
       const dryRun = process.env.DRY_RUN === "true";
-      const ids = dryRun ? null : await postThreadToX([...FINAL_THREAD_POSTS]);
-      const status: AttemptStatus = dryRun || !ids?.length ? "logged_only" : "posted";
+      const paused = isPostingPaused(settings);
+      let ids: string[] | null = null;
+      let status: AttemptStatus = "logged_only";
+      let errorMessage: string | null = null;
+      if (!dryRun && !paused) {
+        try {
+          ids = await postThreadToX([...FINAL_THREAD_POSTS]);
+          status = ids?.length ? "posted" : "logged_only";
+        } catch (err) {
+          if (err instanceof XThreadPostError) {
+            ids = err.postedIds;
+            status = "failed";
+            errorMessage = `Final X thread partially failed after ${ids.length} posts. Posted ids recorded to prevent blind retry.`;
+          } else {
+            throw err;
+          }
+        }
+      }
 
       const { data, error } = await supabaseAdmin
         .from("attempts")
@@ -192,7 +224,7 @@ export async function GET(req: Request) {
           hard_block_reason: null,
           x_post_id: ids?.join(",") ?? null,
           public_strategy_note: "Final archive thread after the experiment reached its goal.",
-          error_message: null,
+          error_message: errorMessage,
         })
         .select("id")
         .single();
@@ -208,10 +240,29 @@ export async function GET(req: Request) {
         posts: FINAL_THREAD_POSTS.length,
         final: true,
         dry_run: dryRun,
+        paused,
       });
     }
 
     const window = getDailySummaryWindow(completion.settings.started_at);
+    const dailyRun = await beginDailyRun({
+      etDate: window.etDate,
+      dayNumber: window.dayNumber,
+      windowStartIso: window.windowStartIso,
+      windowEndIso: window.windowEndIso,
+    });
+    dailyRunId = dailyRun.id;
+    if (!dailyRun.allowed) {
+      return Response.json({
+        status: "skipped",
+        reason: dailyRun.reason,
+        daily_run_status: dailyRun.status,
+        daily_run_id: dailyRun.id,
+        et_date: window.etDate,
+      });
+    }
+
+    const allowXPost = !isPostingPaused(completion.settings);
     let dailySummary = await saveDailySummary(
       await buildDailySummaryBase({
         dayNumber: window.dayNumber,
@@ -224,7 +275,7 @@ export async function GET(req: Request) {
 
     let dailyThreadStatus: string | null = null;
     try {
-      const published = await publishSummaryThread("daily_summary_thread", dailySummary);
+      const published = await publishSummaryThread("daily_summary_thread", dailySummary, { allowXPost });
       dailyThreadStatus = published.status;
       dailySummary = await saveDailySummary({
         ...dailySummary,
@@ -243,7 +294,7 @@ export async function GET(req: Request) {
         const weekly = await buildWeeklySummary(dailySummary.dayNumber);
         if (weekly) {
           let savedWeekly = await savePeriodSummary(weekly);
-          const published = await publishSummaryThread("weekly_summary_thread", savedWeekly);
+          const published = await publishSummaryThread("weekly_summary_thread", savedWeekly, { allowXPost });
           weeklyThreadStatus = published.status;
           savedWeekly = await savePeriodSummary({
             ...savedWeekly,
@@ -267,7 +318,7 @@ export async function GET(req: Request) {
         });
         if (monthly) {
           let savedMonthly = await savePeriodSummary(monthly);
-          const published = await publishSummaryThread("monthly_summary_thread", savedMonthly);
+          const published = await publishSummaryThread("monthly_summary_thread", savedMonthly, { allowXPost });
           monthlyThreadStatus = published.status;
           savedMonthly = await savePeriodSummary({
             ...savedMonthly,
@@ -291,16 +342,24 @@ export async function GET(req: Request) {
       // remains active and hourly has conservative health-based safeguards.
     }
 
-    return Response.json({
+    const response = {
       status: "ok",
       daily_summary_id: dailySummary.id,
       daily_thread_status: dailyThreadStatus,
       weekly_thread_status: weeklyThreadStatus,
       monthly_thread_status: monthlyThreadStatus,
       strategy_id: strategyId,
-    });
+      posting_paused: !allowXPost,
+    };
+    await completeDailyRun(dailyRunId, response);
+    return Response.json(response);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    try {
+      await failDailyRun(dailyRunId, message);
+    } catch {
+      // intentional swallow
+    }
 
     try {
       await supabaseAdmin.from("attempts").insert({

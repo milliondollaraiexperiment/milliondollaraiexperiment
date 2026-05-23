@@ -4,6 +4,7 @@ type Variant = "posted" | "logged_only" | "rejected" | "failed";
 
 type AttemptCardProps = {
   hour_number: number | null;
+  post_type?: string | null;
   text: string;
   created_at: string;
   variant: Variant;
@@ -32,8 +33,16 @@ const badgeLabel: Record<Variant, string> = {
   failed: "failed",
 };
 
+const postTypeLabel: Record<string, string> = {
+  daily_summary_thread: "daily summary thread",
+  weekly_summary_thread: "weekly summary thread",
+  monthly_summary_thread: "monthly summary thread",
+  final_report_thread: "final report thread",
+};
+
 export function AttemptCard({
   hour_number,
+  post_type,
   text,
   created_at,
   variant,
@@ -58,6 +67,12 @@ export function AttemptCard({
           {badgeLabel[variant]}
         </span>
       </header>
+
+      {post_type && postTypeLabel[post_type] && (
+        <p className="mb-3 w-fit rounded-full border border-zinc-200 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-zinc-500 dark:border-zinc-800">
+          {postTypeLabel[post_type]}
+        </p>
+      )}
 
       {text ? (
         <p

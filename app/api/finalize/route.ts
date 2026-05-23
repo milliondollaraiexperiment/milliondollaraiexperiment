@@ -1,6 +1,6 @@
 import { FINAL_THREAD_POSTS } from "@/lib/finalThread";
-import { postThreadToX } from "@/lib/postToX";
-import { getCompletionState, markProjectCompleted } from "@/lib/projectState";
+import { postThreadToX, XThreadPostError } from "@/lib/postToX";
+import { getCompletionState, isPostingPaused, markProjectCompleted } from "@/lib/projectState";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { AttemptStatus } from "@/lib/types";
 
@@ -39,8 +39,24 @@ export async function POST(req: Request) {
   }
 
   const dryRun = process.env.DRY_RUN === "true";
-  const ids = dryRun ? null : await postThreadToX([...FINAL_THREAD_POSTS]);
-  const status: AttemptStatus = dryRun || !ids?.length ? "logged_only" : "posted";
+  const paused = isPostingPaused(settings);
+  let ids: string[] | null = null;
+  let status: AttemptStatus = "logged_only";
+  let errorMessage: string | null = null;
+  if (!dryRun && !paused) {
+    try {
+      ids = await postThreadToX([...FINAL_THREAD_POSTS]);
+      status = ids?.length ? "posted" : "logged_only";
+    } catch (err) {
+      if (err instanceof XThreadPostError) {
+        ids = err.postedIds;
+        status = "failed";
+        errorMessage = `Final X thread partially failed after ${ids.length} posts. Posted ids recorded to prevent blind retry.`;
+      } else {
+        throw err;
+      }
+    }
+  }
 
   const { data, error } = await supabaseAdmin
     .from("attempts")
@@ -54,7 +70,7 @@ export async function POST(req: Request) {
       hard_block_reason: null,
       x_post_id: ids?.join(",") ?? null,
       public_strategy_note: "Final archive thread after the experiment reached its goal.",
-      error_message: null,
+      error_message: errorMessage,
     })
     .select("id")
     .single();
@@ -70,5 +86,6 @@ export async function POST(req: Request) {
     posts: FINAL_THREAD_POSTS.length,
     url: ids?.[0] ? `https://x.com/i/web/status/${ids[0]}` : null,
     dry_run: dryRun,
+    paused,
   });
 }

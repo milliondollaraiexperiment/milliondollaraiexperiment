@@ -7,6 +7,7 @@ import { getTodayPostedCount, getDailyPostLimit } from "@/lib/rateLimit";
 import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
+import { enforceCostGuard } from "@/lib/costGuard";
 import { isWithinPostingWindows } from "@/lib/postingWindows";
 import { getCompletionState, isPostingPaused, markProjectCompleted } from "@/lib/projectState";
 import { autonomousPostingShutdownReason, recordAiFailure, recordAiSuccess } from "@/lib/aiHealth";
@@ -49,6 +50,16 @@ export async function GET(req: Request) {
         status: "skipped",
         reason: "autonomous posting paused",
         mode: completion.settings.mode,
+      });
+    }
+
+    const costGuard = await enforceCostGuard(completion.settings);
+    if (!costGuard.allowed) {
+      return Response.json({
+        status: "skipped",
+        reason: costGuard.reason,
+        hourly_attempts_today: costGuard.hourlyAttemptsToday,
+        failed_attempts_today: costGuard.failedAttemptsToday,
       });
     }
 

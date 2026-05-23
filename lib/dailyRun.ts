@@ -2,7 +2,7 @@ import { supabaseAdmin } from "./supabase";
 
 export type DailyRunDecision = {
   allowed: boolean;
-  status: "running" | "completed" | "failed" | "unavailable" | "duplicate";
+  status: "running" | "completed" | "failed" | "duplicate";
   id: string | null;
   reason: string | null;
 };
@@ -36,12 +36,7 @@ export async function beginDailyRun(args: {
   }
 
   if (isMissingTable(error)) {
-    return {
-      allowed: true,
-      status: "unavailable",
-      id: null,
-      reason: "daily_runs table unavailable; proceeding without idempotency lock",
-    };
+    throw new Error("daily_runs table unavailable; run docs/supabase/summaries-and-health.sql before daily cron");
   }
 
   if (error.code !== "23505") {

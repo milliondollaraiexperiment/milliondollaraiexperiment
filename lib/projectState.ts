@@ -6,6 +6,11 @@ export const FALLBACK_PROJECT_SETTINGS: ProjectSettings = {
   daily_post_limit: 8,
   mode: "normal",
   posting_paused: false,
+  cost_guard: {
+    enabled: true,
+    max_hourly_attempts_per_day: 24,
+    max_failed_attempts_per_day: 6,
+  },
   started_at: null,
   completed_at: null,
   final_post_sent: false,
@@ -23,6 +28,10 @@ export function normalizeProjectSettings(value: Partial<ProjectSettings> | null 
     ...value,
     mode: normalizeMode(value),
     posting_paused: Boolean(value?.posting_paused),
+    cost_guard: {
+      ...FALLBACK_PROJECT_SETTINGS.cost_guard,
+      ...(value?.cost_guard ?? {}),
+    },
     final_post_sent: Boolean(value?.final_post_sent),
   };
 }
@@ -45,6 +54,31 @@ export async function getProjectSettings(): Promise<ProjectSettings> {
   return normalizeProjectSettings(data?.value as Partial<ProjectSettings> | undefined);
 }
 
+export async function saveProjectSettings(settings: ProjectSettings): Promise<ProjectSettings> {
+  const next = normalizeProjectSettings(settings);
+  const { error } = await supabaseAdmin
+    .from("settings")
+    .upsert({ key: "project", value: next }, { onConflict: "key" });
+
+  if (error) {
+    throw new Error(`saveProjectSettings failed: ${error.message}`);
+  }
+  return next;
+}
+
+export async function pauseAutonomousPosting(
+  settings: ProjectSettings,
+  reason: string,
+): Promise<ProjectSettings> {
+  const raw = settings as ProjectSettings & { pause_reason?: string; paused_at?: string };
+  return saveProjectSettings({
+    ...raw,
+    posting_paused: true,
+    pause_reason: reason,
+    paused_at: new Date().toISOString(),
+  } as ProjectSettings);
+}
+
 export async function getCurrentAmountCents(): Promise<number> {
   const { data, error } = await supabaseAdmin.from("donations").select("amount_cents");
   if (error) {
@@ -65,14 +99,7 @@ export async function markProjectCompleted(
     completed_at: completedAt,
   });
 
-  const { error } = await supabaseAdmin
-    .from("settings")
-    .upsert({ key: "project", value: next }, { onConflict: "key" });
-
-  if (error) {
-    throw new Error(`markProjectCompleted failed: ${error.message}`);
-  }
-  return next;
+  return saveProjectSettings(next);
 }
 
 export async function getCompletionState(): Promise<{

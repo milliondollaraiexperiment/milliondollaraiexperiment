@@ -72,6 +72,11 @@ export type ProjectSettings = {
   daily_post_limit: number;
   mode: ProjectMode;
   posting_paused?: boolean;
+  cost_guard?: {
+    enabled?: boolean;
+    max_hourly_attempts_per_day?: number;
+    max_failed_attempts_per_day?: number;
+  };
   started_at?: string | null;
   completed_at?: string | null;
   final_post_sent?: boolean;

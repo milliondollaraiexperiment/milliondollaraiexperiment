@@ -1,5 +1,5 @@
 import { postToX } from "@/lib/postToX";
-import { FALLBACK_PROJECT_SETTINGS, normalizeProjectSettings } from "@/lib/projectState";
+import { FALLBACK_PROJECT_SETTINGS, getProjectSettings, normalizeProjectSettings } from "@/lib/projectState";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { ProjectSettings } from "@/lib/types";
 
@@ -49,6 +49,17 @@ export async function POST(req: Request) {
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${cronSecret}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const settings = await getProjectSettings();
+  if (settings.started_at) {
+    return Response.json(
+      {
+        error: "Experiment has already started; launch endpoint is disabled to avoid resetting started_at.",
+        started_at: settings.started_at,
+      },
+      { status: 409 },
+    );
   }
 
   const text =

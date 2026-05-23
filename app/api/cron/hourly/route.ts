@@ -84,6 +84,13 @@ export async function GET(req: Request) {
     }
 
     const context = await getContext();
+    if (!context.strategy) {
+      return Response.json({
+        status: "skipped",
+        reason: "waiting for Strategy AI",
+      });
+    }
+
     const strategyHealth = await getStrategyHealth();
     const postingWindows = context.strategy?.posting_windows_utc ?? [];
     if (!isWithinPostingWindows(postingWindows)) {

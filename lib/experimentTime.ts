@@ -100,6 +100,18 @@ export function getDailySummaryWindow(
   };
 }
 
+export function getCurrentEtDayWindow(now = new Date()) {
+  const currentEt = etParts(now);
+  const nextEt = addEtDays(currentEt, 1);
+  return {
+    etDate: `${currentEt.year}-${String(currentEt.month).padStart(2, "0")}-${String(
+      currentEt.day,
+    ).padStart(2, "0")}`,
+    windowStartIso: etMidnightUtc(currentEt).toISOString(),
+    windowEndIso: etMidnightUtc(nextEt).toISOString(),
+  };
+}
+
 export function shouldBuildWeeklySummary(dayNumber: number) {
   return dayNumber > 0 && dayNumber % 7 === 0;
 }

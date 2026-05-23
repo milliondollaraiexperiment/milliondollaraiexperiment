@@ -1,22 +1,19 @@
 import { supabaseAdmin } from "./supabase";
 import { getLatestStrategy } from "./getLatestStrategy";
 import { SUMMARY_POST_TYPES } from "./summaryTypes";
+import { getCurrentEtDayWindow } from "./experimentTime";
 import type { ProjectSettings } from "./types";
 
 const DEFAULT_DAILY_LIMIT = 8;
 
-// UTC start-of-day ISO string, e.g. "2026-05-22T00:00:00.000Z"
-function startOfTodayUtcIso(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-}
-
 export async function getTodayPostedCount(): Promise<number> {
+  const window = getCurrentEtDayWindow();
   const { data, error } = await supabaseAdmin
     .from("attempts")
     .select("post_type,text")
     .eq("status", "posted")
-    .gte("created_at", startOfTodayUtcIso());
+    .gte("created_at", window.windowStartIso)
+    .lt("created_at", window.windowEndIso);
 
   if (error) {
     throw new Error(`getTodayPostedCount failed: ${error.message}`);

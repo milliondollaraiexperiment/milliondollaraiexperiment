@@ -1,5 +1,6 @@
 import { pauseAutonomousPosting } from "./projectState";
 import { supabaseAdmin } from "./supabase";
+import { getCurrentEtDayWindow } from "./experimentTime";
 import type { ProjectSettings } from "./types";
 
 export type CostGuardResult = {
@@ -9,20 +10,17 @@ export type CostGuardResult = {
   failedAttemptsToday: number;
 };
 
-function startOfTodayUtcIso(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-}
-
 function guardEnabled(settings: ProjectSettings): boolean {
   return settings.cost_guard?.enabled !== false;
 }
 
 async function countAttemptsToday(args: { status?: "failed"; hourlyOnly?: boolean } = {}) {
+  const window = getCurrentEtDayWindow();
   let query = supabaseAdmin
     .from("attempts")
     .select("id", { count: "exact", head: true })
-    .gte("created_at", startOfTodayUtcIso());
+    .gte("created_at", window.windowStartIso)
+    .lt("created_at", window.windowEndIso);
 
   if (args.hourlyOnly) {
     query = query.not("hour_number", "is", null);

@@ -4,6 +4,7 @@ import { checkSafety } from "@/lib/checkSafety";
 import { hardBlock } from "@/lib/hardBlock";
 import { saveAttempt } from "@/lib/saveAttempt";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
+import { getProjectSettings } from "@/lib/projectState";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,18 @@ export async function GET(req: Request) {
   }
 
   try {
+    const settings = await getProjectSettings();
+    const allowAfterStart = process.env.ALLOW_TEST_GENERATE_AFTER_START === "true";
+    if (settings.started_at && !allowAfterStart) {
+      return Response.json(
+        {
+          error:
+            "Experiment already started; /api/test-generate is disabled unless ALLOW_TEST_GENERATE_AFTER_START=true.",
+        },
+        { status: 409 },
+      );
+    }
+
     const url = new URL(req.url);
     const force = url.searchParams.get("force") === "1";
     if (!force) {

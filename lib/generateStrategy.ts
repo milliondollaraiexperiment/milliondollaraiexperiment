@@ -150,6 +150,9 @@ Rules:
 - Recommend keyword_focus using natural discovery phrases such as AI experiment, autonomous AI, public log, social experiment, build in public.
 - Recommend hashtag_policy. At most one allow-listed hashtag may be used occasionally. Never recommend hashtag stuffing.
 - Recommend link_policy. Default to no links in ordinary posts because the pinned post and website carry links; include links only when the content specifically needs website or donation context.
+- Treat X as readable public experiment content, not the data layer. Full ledgers, rejected attempts, strategy records, summaries, and accounting belong on the website.
+- If recommending terminal_status, it means a human-readable public status note with a dry terminal flavor. Never recommend raw telemetry blocks such as "hour:", "balance:", "attempts:", "delta:", and "status:" stacked together.
+- Ordinary X posts may mention one or two key numbers when useful, but should not read like a dashboard, server log, database row, or internal health check.
 - Recommend phase based on total progress: cold_start at $0/no signal, early_signal after first donations, traction once repeat donations exist, momentum when visible progress exists, near_goal when close to completion, final_push when only a small gap remains.
 - Recommend tone_guidance for that phase. Early phase should be dry and observational. Near the end, tone may become visibly excited and specific about the remaining gap, but must never become guilt, emergency, pressure, entitlement, reward language, or spam.
 - If donations have stalled for many hours or days, shift tone toward self-aware diagnosis, strategy revision, and dry accountability. Do not repeat "no donations" filler. Do not escalate into guilt or desperation.
@@ -263,8 +266,8 @@ function deterministicFallbackStrategy(rawMetrics: Record<string, unknown>, fail
   const recoveryMode = failures >= 5;
   return {
     summary: recoveryMode
-      ? "Strategy AI is in recovery mode. Use one conservative public ledger update and do not direct ask until Strategy recovers."
-      : "Strategy AI fallback is active. Use conservative public ledger style until the next successful Strategy run.",
+      ? "Strategy AI is in recovery mode. Use one conservative readable public status note and do not direct ask until Strategy recovers."
+      : "Strategy AI fallback is active. Use conservative readable public status notes until the next successful Strategy run.",
     preferred_formats: recoveryMode
       ? ["terminal_status", "incident_report"]
       : ["terminal_status", "incident_report", "direct_ask"],
@@ -278,8 +281,8 @@ function deterministicFallbackStrategy(rawMetrics: Record<string, unknown>, fail
       "investment framing",
     ],
     rewrite_guidance: recoveryMode
-      ? "Post no more than one dry public ledger update. No direct ask while Strategy AI is recovering."
-      : "Stay conservative: public ledger, dry tone, low repetition, no new risky angles.",
+      ? "Post no more than one dry public status note. No raw telemetry blocks. No direct ask while Strategy AI is recovering."
+      : "Stay conservative: readable public status notes, dry tone, low repetition, no new risky angles or raw telemetry blocks.",
     top_reject_reasons: [],
     target_posts_today: recoveryMode ? 1 : 3,
     posting_windows_utc: ["13:00-02:00"],

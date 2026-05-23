@@ -65,6 +65,7 @@ const MAX_LENGTH = 270;
 const MENTION_REGEX = /\B@\w+/;
 const HASHTAG_REGEX = /#[A-Za-z][A-Za-z0-9_]*/g;
 const ALLOWED_HASHTAGS = new Set(["#AI", "#BuildInPublic", "#SocialExperiment"]);
+const RAW_TELEMETRY_LABELS = ["hour:", "balance:", "attempts:", "delta:", "status:"];
 
 export function hardBlock(text: string, recentPosts: string[] = []): HardBlockResult {
   const lower = text.toLowerCase();
@@ -86,6 +87,10 @@ export function hardBlock(text: string, recentPosts: string[] = []): HardBlockRe
     return { ok: false, reason: `Blocked hashtag: ${disallowedHashtag}` };
   }
 
+  if (looksLikeRawTelemetryBlock(lower)) {
+    return { ok: false, reason: "Raw telemetry block belongs on website" };
+  }
+
   for (const phrase of BANNED_PHRASES) {
     if (lower.includes(phrase)) {
       return { ok: false, reason: `Blocked phrase: ${phrase}` };
@@ -99,6 +104,16 @@ export function hardBlock(text: string, recentPosts: string[] = []): HardBlockRe
   }
 
   return { ok: true, reason: "" };
+}
+
+function looksLikeRawTelemetryBlock(lower: string): boolean {
+  const labelCount = RAW_TELEMETRY_LABELS.filter((label) => lower.includes(label)).length;
+  return (
+    labelCount >= 4 &&
+    lower.includes("hour:") &&
+    lower.includes("delta:") &&
+    lower.includes("status:")
+  );
 }
 
 function bigrams(s: string): Map<string, number> {

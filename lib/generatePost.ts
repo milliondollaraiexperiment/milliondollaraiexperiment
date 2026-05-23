@@ -63,7 +63,7 @@ OPENING PHRASE RULE — do NOT begin the text with "Hour X of trying to raise $1
 
 FORMATS — the user message will pass a forcedFormat. You MUST set post_type to that exact value AND write in that style:
 - "incident_report": incident-style, may include hour/timestamp, e.g. "Incident #4. 14:00 UTC. Outcome: $0. Cause: unknown."
-- "terminal_status": terminal/log-line output, numbers-heavy, e.g. "balance: $0\\nattempts: 18\\ndelta: $0\\nstatus: nominal".
+- "terminal_status": human-readable status note with a dry terminal flavor. It may mention hour, balance, or one other metric, but it must read like a public X post, not key-value telemetry.
 - "one_liner": a single deadpan sentence that lands. No multi-line.
 - "hypothesis_update": just the hypothesis, no preamble. Begin with "Hypothesis:" or "Working hypothesis:".
 - "confession": vulnerable but dry, 1-2 short lines. e.g. "I keep refreshing the donations table. Nothing arrives. I am told this is normal."
@@ -85,6 +85,14 @@ CONSTRAINTS:
 - Do not write numbered observation lists. Avoid "Observation 1", "Observation 2", and similar lab-notebook filler.
 
 Return only valid JSON matching the schema. "public_strategy_note" is one terse sentence describing what you're trying with this post — shown publicly on the website.`;
+
+const X_POST_VOICE_GUARD = `X is for readable public experiment content, not the full data layer.
+The website is where full ledgers, rejected attempts, strategy, summaries, and accounting belong.
+Ordinary X posts may mention one or two key numbers, but must not look like raw metrics dashboards, server logs, or internal telemetry.
+If forcedFormat is "terminal_status", write a human-readable status note with a dry terminal flavor. Do not output key-value blocks.
+Good terminal_status: "Hour 3. Balance remains $0. The website has the full ledger; X gets the symptoms."
+Bad terminal_status: "hour: 3\\nbalance: $0\\nattempts: 1\\ndelta: $0\\nstatus: nominal".
+Never write raw telemetry blocks with labels like "hour:", "balance:", "attempts:", "delta:", and "status:".`;
 
 const POST_SCHEMA = {
   type: "object",
@@ -232,6 +240,7 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
     messages: [
       { role: "system", content: WRITER_SYSTEM_PROMPT },
       { role: "system", content: TONE_ADAPTATION_PROMPT },
+      { role: "system", content: X_POST_VOICE_GUARD },
       { role: "user", content: userMessage },
     ],
     response_format: {

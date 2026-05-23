@@ -21,7 +21,7 @@ const FALLBACK_MEMORY: StrategyMemory = {
   ],
   retired_lessons: [],
   avoid_patterns: ["numbered observation lists", "generic no-donation filler", "repeated balance-only posts"],
-  prefer_patterns: ["short public ledger posts", "dry direct asks", "strategy revisions", "terminal status"],
+  prefer_patterns: ["short public posts", "dry direct asks", "strategy revisions", "readable status notes"],
   tone_rules: ["dry", "transparent", "not needy"],
   link_rules: [
     "Stripe link only on direct asks.",

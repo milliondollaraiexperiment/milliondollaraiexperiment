@@ -274,6 +274,7 @@ export async function GET(req: Request) {
     );
 
     let dailyThreadStatus: string | null = null;
+    let dailyThreadError: string | null = null;
     try {
       const published = await publishSummaryThread("daily_summary_thread", dailySummary, { allowXPost });
       dailyThreadStatus = published.status;
@@ -283,7 +284,8 @@ export async function GET(req: Request) {
         publicThread: published.posts,
         xPostIds: published.xPostIds,
       });
-    } catch {
+    } catch (err) {
+      dailyThreadError = err instanceof Error ? err.message : String(err);
       // Daily facts are saved. Public summary thread failure should not
       // prevent memory compression or strategy recovery.
     }
@@ -334,10 +336,12 @@ export async function GET(req: Request) {
     }
 
     let strategyId: string | null = null;
+    let strategyError: string | null = null;
     try {
       const strategy = await generateAndSaveStrategy();
       strategyId = strategy?.id ?? null;
-    } catch {
+    } catch (err) {
+      strategyError = err instanceof Error ? err.message : String(err);
       // Strategy is an optimization layer. The latest successful strategy
       // remains active and hourly has conservative health-based safeguards.
     }
@@ -346,9 +350,11 @@ export async function GET(req: Request) {
       status: "ok",
       daily_summary_id: dailySummary.id,
       daily_thread_status: dailyThreadStatus,
+      daily_thread_error: dailyThreadError,
       weekly_thread_status: weeklyThreadStatus,
       monthly_thread_status: monthlyThreadStatus,
       strategy_id: strategyId,
+      strategy_error: strategyError,
       posting_paused: !allowXPost,
     };
     await completeDailyRun(dailyRunId, response);

@@ -1,5 +1,5 @@
 import {
-  openai,
+  createJsonResponse,
   STRATEGY_FALLBACK_MODEL,
   STRATEGY_MODEL,
   STRATEGY_SECOND_FALLBACK_MODEL,
@@ -254,9 +254,12 @@ function shouldFallbackStrategyModel(err: unknown): boolean {
   const e = err as { status?: number; code?: string; message?: string };
   const message = e.message?.toLowerCase() ?? "";
   return (
+    e.status === 404 ||
     e.status === 429 ||
     e.code === "rate_limit_exceeded" ||
     e.code === "insufficient_quota" ||
+    message.includes("not supported") ||
+    message.includes("not found") ||
     message.includes("rate limit") ||
     message.includes("quota")
   );
@@ -300,21 +303,12 @@ function deterministicFallbackStrategy(rawMetrics: Record<string, unknown>, fail
 }
 
 async function callStrategyModel(model: string, userContent: string) {
-  return openai.chat.completions.create({
+  return createJsonResponse<StrategyAiResult>({
     model,
-    messages: [
-      { role: "system", content: STRATEGY_PROMPT },
-      { role: "user", content: userContent },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "strategy_result",
-        strict: true,
-        schema: STRATEGY_SCHEMA,
-      },
-    },
-    temperature: 0.3,
+    instructions: STRATEGY_PROMPT,
+    input: userContent,
+    schemaName: "strategy_result",
+    schema: STRATEGY_SCHEMA,
   });
 }
 
@@ -407,10 +401,8 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
   for (const model of modelChain) {
     try {
       usedModel = model;
-      const completion = await callStrategyModel(model, userContent);
-      const raw = completion.choices[0]?.message?.content;
-      if (!raw) throw new Error("Strategy AI returned empty content");
-      strategy = sanitizeStrategy(JSON.parse(raw) as StrategyAiResult, rawMetrics, model);
+      const parsed = await callStrategyModel(model, userContent);
+      strategy = sanitizeStrategy(parsed, rawMetrics, model);
       await recordAiSuccess("strategy");
       break;
     } catch (err) {

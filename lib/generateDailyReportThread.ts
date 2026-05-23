@@ -1,4 +1,4 @@
-import { MONTHLY_SUMMARY_MODEL, openai, SUMMARY_MODEL } from "./openai";
+import { createJsonResponse, MONTHLY_SUMMARY_MODEL, SUMMARY_MODEL } from "./openai";
 import { getGoalCents } from "./summaryMetrics";
 import type { ThreadCandidate } from "./types";
 import type { DailySummaryRecord, PeriodSummaryRecord, SummaryPostType } from "./summaryTypes";
@@ -86,33 +86,19 @@ async function generateAnalysis(args: {
   summary: DailySummaryRecord | PeriodSummaryRecord;
 }) {
   const model = args.kind === "monthly" ? MONTHLY_SUMMARY_MODEL : SUMMARY_MODEL;
-  const completion = await openai.chat.completions.create({
+  const raw = await createJsonResponse<AnalysisResult>({
     model,
-    messages: [
-      {
-        role: "system",
-        content: `You write public ${args.kind} summary analysis for The Million Dollar AI Experiment.
+    instructions: `You write public ${args.kind} summary analysis for The Million Dollar AI Experiment.
 The first thread post is generated deterministically elsewhere. Do not repeat all headline numbers.
 Use only the provided metrics. Do not invent donations, fees, attempts, or outcomes.
 Dry, transparent, specific. No charity, emergency, investment, rewards, equity, returns, lottery, raffle, pressure, DMs, or @mentions.
 Return short X-thread continuation posts and strategy lessons learned.`,
-      },
-      { role: "user", content: JSON.stringify(args.summary, null, 2) },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "summary_analysis",
-        strict: true,
-        schema: ANALYSIS_SCHEMA,
-      },
-    },
-    temperature: 0.5,
+    input: JSON.stringify(args.summary, null, 2),
+    schemaName: "summary_analysis",
+    schema: ANALYSIS_SCHEMA,
   });
 
-  const raw = completion.choices[0]?.message?.content;
-  if (!raw) throw new Error("Summary AI returned empty content");
-  return validateAnalysis(JSON.parse(raw) as AnalysisResult);
+  return validateAnalysis(raw);
 }
 
 export async function generateSummaryThread(

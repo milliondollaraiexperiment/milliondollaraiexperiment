@@ -181,6 +181,21 @@ function formatUsd(cents: number) {
   }).format(cents / 100);
 }
 
+function formatUtcWindowWithEt(window: string) {
+  const match = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(window);
+  if (!match) return window;
+  const [, startHour, startMinute, endHour, endMinute] = match;
+  const now = new Date();
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), Number(startHour), Number(startMinute)));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), Number(endHour), Number(endMinute)));
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${window} UTC (${formatter.format(start)}-${formatter.format(end)} ET)`;
+}
+
 function SiteHeader() {
   return (
     <header className="mb-10 flex flex-col gap-4 border-b border-zinc-200 pb-5 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
@@ -289,14 +304,12 @@ function LatestStrategy({
   strategyHealth: StrategyHealthRecord | null;
   aiHealth: Record<string, AiHealthRecord | null>;
 }) {
-  if (!strategy) return null;
-
   return (
     <section className="mt-12">
       <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
         Latest strategy update
       </h2>
-      {strategy.created_at && (
+      {strategy?.created_at && (
         <p className="mt-1 font-mono text-[11px] text-zinc-500">
           Updated: <time dateTime={strategy.created_at}>{formatPublicTimestamp(strategy.created_at)}</time>
         </p>
@@ -326,82 +339,93 @@ function LatestStrategy({
             ))}
           </div>
         </div>
-        <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">{strategy.summary}</p>
-        <p className="mt-2 font-mono text-[11px] text-zinc-500">
-          Strategy model: {strategy.model ?? "unknown"}
-        </p>
-        {strategy.rewrite_guidance && (
+        {strategy ? (
+          <>
+            <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">{strategy.summary}</p>
+            <p className="mt-2 font-mono text-[11px] text-zinc-500">
+              Strategy model: {strategy.model ?? "unknown"}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+            No successful strategy has been saved yet. Hourly posting continues with conservative
+            defaults while the health panel shows the latest failure.
+          </p>
+        )}
+        {strategy?.rewrite_guidance && (
           <p className="mt-3 text-xs italic leading-5 text-zinc-500">
             Today&apos;s adjustment: {strategy.rewrite_guidance}
           </p>
         )}
-        {strategy.top_reject_reasons.length > 0 && (
+        {(strategy?.top_reject_reasons.length ?? 0) > 0 && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Recent rejection signals
             </p>
-            <StrategyPillList items={strategy.top_reject_reasons} />
+            <StrategyPillList items={strategy?.top_reject_reasons ?? []} />
           </div>
         )}
-        {strategy.target_posts_today && (
+        {strategy?.target_posts_today && (
           <p className="mt-4 font-mono text-[11px] text-zinc-500">
             Today&apos;s AI posting target: {strategy.target_posts_today}
           </p>
         )}
-        {strategy.posting_windows_utc.length > 0 && (
+        {(strategy?.posting_windows_utc.length ?? 0) > 0 && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Posting windows UTC
             </p>
-            <StrategyPillList items={strategy.posting_windows_utc} />
+            <StrategyPillList
+              items={(strategy?.posting_windows_utc ?? []).map(formatUtcWindowWithEt)}
+            />
           </div>
         )}
-        {(strategy.min_post_interval_minutes || strategy.direct_ask_cadence_hours) && (
+        {(strategy?.min_post_interval_minutes || strategy?.direct_ask_cadence_hours) && (
           <p className="mt-4 font-mono text-[11px] text-zinc-500">
-            Min interval: {strategy.min_post_interval_minutes ?? 60} min
+            Min interval: {strategy?.min_post_interval_minutes ?? 60} min
             {" / "}
-            Direct ask cadence: {strategy.direct_ask_cadence_hours ?? 6} h
+            Direct ask cadence: {strategy?.direct_ask_cadence_hours ?? 6} h
           </p>
         )}
-        {strategy.keyword_focus.length > 0 && (
+        {(strategy?.keyword_focus.length ?? 0) > 0 && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Discovery focus
             </p>
-            <StrategyPillList items={strategy.keyword_focus} />
+            <StrategyPillList items={strategy?.keyword_focus ?? []} />
           </div>
         )}
-        {(strategy.hashtag_policy || strategy.link_policy) && (
+        {(strategy?.hashtag_policy || strategy?.link_policy) && (
           <div className="mt-4 space-y-1 text-[11px] leading-5 text-zinc-500">
-            {strategy.hashtag_policy && <p>Hashtag policy: {strategy.hashtag_policy}</p>}
-            {strategy.link_policy && <p>Link policy: {strategy.link_policy}</p>}
+            {strategy?.hashtag_policy && <p>Hashtag policy: {strategy.hashtag_policy}</p>}
+            {strategy?.link_policy && <p>Link policy: {strategy.link_policy}</p>}
           </div>
         )}
-        {(strategy.phase || strategy.tone_guidance) && (
+        {(strategy?.phase || strategy?.tone_guidance) && (
           <div className="mt-4 space-y-1 text-[11px] leading-5 text-zinc-500">
-            {strategy.phase && <p>Phase: {strategy.phase}</p>}
-            {strategy.tone_guidance && <p>Tone: {strategy.tone_guidance}</p>}
+            {strategy?.phase && <p>Phase: {strategy.phase}</p>}
+            {strategy?.tone_guidance && <p>Tone: {strategy.tone_guidance}</p>}
           </div>
         )}
-        {(strategy.forced_format || strategy.preferred_formats.length > 0) && (
+        {(strategy?.forced_format || (strategy?.preferred_formats.length ?? 0) > 0) && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Writer bias
             </p>
             <StrategyPillList
               items={[
-                ...(strategy.forced_format ? [`forced: ${strategy.forced_format}`] : []),
-                ...strategy.preferred_formats.map((format) => `prefer: ${format}`),
+                ...(strategy?.forced_format ? [`forced: ${strategy.forced_format}`] : []),
+                ...(strategy?.preferred_formats ?? []).map((format) => `prefer: ${format}`),
               ]}
             />
           </div>
         )}
-        {strategy.banned_angles.length > 0 && (
+        {(strategy?.banned_angles.length ?? 0) > 0 && (
           <div className="mt-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               Avoiding
             </p>
-            <StrategyPillList items={strategy.banned_angles} />
+            <StrategyPillList items={strategy?.banned_angles ?? []} />
           </div>
         )}
       </div>

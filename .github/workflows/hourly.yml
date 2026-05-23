@@ -9,7 +9,9 @@ name: hourly cron
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    # GitHub scheduled workflows can be delayed or dropped. Tick often;
+    # the app enforces posting windows, min intervals, daily caps, and cost guard.
+    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
 jobs:

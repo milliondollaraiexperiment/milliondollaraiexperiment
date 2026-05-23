@@ -5,6 +5,7 @@ import {
   STRATEGY_SECOND_FALLBACK_MODEL,
 } from "./openai";
 import { sanitizePostingWindows } from "./postingWindows";
+import { X_POST_MAX_CHARACTERS, X_SUMMARY_POST_MAX_CHARACTERS } from "./xPostLimits";
 import { getProjectSettings } from "./projectState";
 import { recordAiFailure, recordAiSuccess } from "./aiHealth";
 import { buildStrategyMemoryContext, updateActiveStrategyMemory } from "./strategyMemory";
@@ -151,6 +152,7 @@ Rules:
 - Recommend hashtag_policy. At most one allow-listed hashtag may be used occasionally. Never recommend hashtag stuffing.
 - Recommend link_policy. Default to no links in ordinary posts because the pinned post and website carry links; include links only when the content specifically needs website or donation context.
 - Treat X as readable public experiment content, not the data layer. Full ledgers, rejected attempts, strategy records, summaries, and accounting belong on the website.
+- The X account has Premium, so Writer may use longer posts when the strategy needs nuance. Do not make everything long. Decide whether tomorrow should use short posts, medium direct asks, or occasional longer public notes based on what cleared and what felt repetitive. Put that guidance in rewrite_guidance or tone_guidance.
 - If recommending terminal_status, it means a human-readable public status note with a dry terminal flavor. Never recommend raw telemetry blocks such as "hour:", "balance:", "attempts:", "delta:", and "status:" stacked together.
 - Ordinary X posts may mention one or two key numbers when useful, but should not read like a dashboard, server log, database row, or internal health check.
 - Recommend phase based on total progress: cold_start at $0/no signal, early_signal after first donations, traction once repeat donations exist, momentum when visible progress exists, near_goal when close to completion, final_push when only a small gap remains.
@@ -378,6 +380,11 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
       total_raised_cents: totalRaisedCents,
       remaining_cents: Math.max(0, goalCents - totalRaisedCents),
       progress_percent: goalCents > 0 ? totalRaisedCents / goalCents : 0,
+      x_limits: {
+        ordinary_post_max_characters: X_POST_MAX_CHARACTERS,
+        summary_thread_post_max_characters: X_SUMMARY_POST_MAX_CHARACTERS,
+        note: "Premium allows longer posts, but Strategy should choose length intentionally rather than defaulting long.",
+      },
       rawMetrics,
       compressedMemory: memoryContext,
       recentAttemptsFreshnessCheck: rows,

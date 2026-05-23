@@ -1,4 +1,5 @@
 import { openai, WRITER_MODEL } from "./openai";
+import { X_POST_MAX_CHARACTERS } from "./xPostLimits";
 import type { Context, PostCandidate } from "./types";
 
 const FORMAT_TYPES = [
@@ -17,6 +18,17 @@ const FORMAT_TYPE_SET = new Set<string>(FORMAT_TYPES);
 const DIRECT_ASK_INTERVAL_HOURS = 6;
 const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
 const SITE_URL = "https://themilliondollaraiexperiment.com";
+
+export type PostRewriteFeedback = {
+  source: "writer" | "safety" | "hardBlock";
+  reason: string;
+  text?: string;
+  post_type?: string;
+};
+
+type GeneratePostOptions = {
+  rewriteFeedback?: PostRewriteFeedback[];
+};
 const TONE_ADAPTATION_PROMPT = `Strategy AI may change tone_guidance and phase over time. Treat that as real direction inside the safety boundaries:
 - cold_start: dry, legible, self-aware, not needy.
 - early_signal: curious and analytical; acknowledge what changed.
@@ -79,7 +91,7 @@ CONSTRAINTS:
 - Do not claim charity, emergency, rewards, equity, returns, lottery, raffle, future value.
 - Do not ask for DMs. Do not tag people. Do not use @ mentions.
 - Do not pretend to be human.
-- Keep under 270 characters total (newlines count).
+- Keep under the maxCharacters value provided in the user message (newlines count). Strategy may choose concise or longer posts inside that limit.
 - Most ordinary posts should NOT include a link. Direct ask posts must include the donation link. Public-log, strategy, rules, or rejected-attempt posts may include the website link when useful.
 - Direct asks are allowed to be plain and stronger than the other formats, but they must stay public, voluntary, non-urgent, and non-transactional. No guilt, no private payment request, no repeated link spam.
 - Do not write numbered observation lists. Avoid "Observation 1", "Observation 2", and similar lab-notebook filler.
@@ -166,8 +178,10 @@ function validatePostCandidate(candidate: PostCandidate): PostCandidate {
     }
   }
 
-  if (text.length > 270) {
-    throw new Error(`Writer AI returned post over 270 characters: ${text.length}`);
+  if (text.length > X_POST_MAX_CHARACTERS) {
+    throw new Error(
+      `Writer AI returned post over ${X_POST_MAX_CHARACTERS} characters: ${text.length}`,
+    );
   }
 
   if (!publicStrategyNote) {
@@ -181,10 +195,29 @@ function validatePostCandidate(candidate: PostCandidate): PostCandidate {
   };
 }
 
-export async function generatePost(context: Context): Promise<PostCandidate> {
-  const bannedPostTypes = Array.from(new Set(context.recentPostTypes.slice(0, 3)));
+function summarizeRewriteFeedback(feedback: PostRewriteFeedback[] = []) {
+  return feedback.slice(-3).map((item, index) => ({
+    attempt: index + 1,
+    source: item.source,
+    reason: item.reason,
+    post_type: item.post_type ?? null,
+    text: item.text ?? null,
+  }));
+}
+
+export async function generatePost(
+  context: Context,
+  options: GeneratePostOptions = {},
+): Promise<PostCandidate> {
+  const failedPostTypes = (options.rewriteFeedback ?? [])
+    .map((item) => item.post_type)
+    .filter((postType): postType is string => Boolean(postType));
+  const bannedPostTypes = Array.from(
+    new Set([...context.recentPostTypes.slice(0, 3), ...failedPostTypes]),
+  );
   const forcedFormat = pickForcedFormat(context, bannedPostTypes);
   const allowsHourPrefix = HOUR_PREFIX_ALLOWED.has(forcedFormat);
+  const rewriteFeedback = summarizeRewriteFeedback(options.rewriteFeedback);
 
   const userMessage = JSON.stringify(
     {
@@ -218,6 +251,8 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
         : null,
       mode: context.mode,
       forcedFormat,
+      maxCharacters: X_POST_MAX_CHARACTERS,
+      failedCandidateFeedback: rewriteFeedback,
       rules: [
         `You MUST write in "${forcedFormat}" format. Set post_type to "${forcedFormat}" exactly.`,
         context.strategy
@@ -226,6 +261,9 @@ export async function generatePost(context: Context): Promise<PostCandidate> {
         forcedFormat === "direct_ask"
           ? `Include the official contribution link exactly once and do not include the website link: ${DONATION_URL}`
           : `Do not include a link unless the post is specifically about the public log, strategy, rules, or rejected attempts. If a website link is needed, use ${SITE_URL}. Do not put both links in one post.`,
+        rewriteFeedback.length > 0
+          ? "Previous candidates in this same hourly run failed. Write a materially different replacement that fixes the listed reasons. Do not reuse failed text, angle, or phrasing."
+          : "No failed candidate exists for this hourly run yet.",
         allowsHourPrefix
           ? `For "${forcedFormat}" the "Hour N" opening is allowed but not required.`
           : `Do NOT begin the text with "Hour N of trying to raise..." — that opening is reserved for incident_report and terminal_status formats.`,

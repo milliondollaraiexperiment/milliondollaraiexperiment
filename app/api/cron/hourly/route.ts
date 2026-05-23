@@ -1,5 +1,5 @@
 import { getContext } from "@/lib/getContext";
-import { generatePost } from "@/lib/generatePost";
+import { generatePost, type PostRewriteFeedback } from "@/lib/generatePost";
 import { checkSafety } from "@/lib/checkSafety";
 import { hardBlock } from "@/lib/hardBlock";
 import { saveAttempt } from "@/lib/saveAttempt";
@@ -16,9 +16,21 @@ import {
   conservativeIntervalMinutes,
   getStrategyHealth,
 } from "@/lib/strategyHealth";
-import type { AttemptStatus } from "@/lib/types";
+import type { AttemptRecord, AttemptStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const MAX_CANDIDATE_ATTEMPTS = 3;
+
+function rejectionReason(record: AttemptRecord) {
+  const reasons = [
+    ...record.safety.reasons,
+    record.safety.rewrite_instruction,
+    record.hard.ok ? null : record.hard.reason,
+  ].filter((reason): reason is string => Boolean(reason));
+
+  return reasons.join(" / ") || "Candidate rejected by safety checks";
+}
 
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -98,26 +110,69 @@ export async function GET(req: Request) {
       });
     }
 
-    let post;
-    try {
-      post = await generatePost(context);
-      await recordAiSuccess("writer");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      await recordAiFailure("writer", message);
-      throw err;
-    }
+    let finalRecord: AttemptRecord | null = null;
+    let savedRejectedAttemptId: string | null = null;
+    const rewriteFeedback: PostRewriteFeedback[] = [];
 
-    let safety;
-    try {
-      safety = await checkSafety(post.text, context.recentPosts, context.strategy);
-      await recordAiSuccess("safety");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      await recordAiFailure("safety", message);
-      throw err;
+    for (let candidateAttempt = 1; candidateAttempt <= MAX_CANDIDATE_ATTEMPTS; candidateAttempt++) {
+      let post;
+      try {
+        post = await generatePost(context, { rewriteFeedback });
+        await recordAiSuccess("writer");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await recordAiFailure("writer", message);
+        rewriteFeedback.push({
+          source: "writer",
+          reason: message,
+        });
+        if (candidateAttempt === MAX_CANDIDATE_ATTEMPTS) {
+          throw err;
+        }
+        continue;
+      }
+
+      let safety;
+      try {
+        safety = await checkSafety(post.text, context.recentPosts, context.strategy);
+        await recordAiSuccess("safety");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await recordAiFailure("safety", message);
+        throw err;
+      }
+      const hard = hardBlock(post.text, context.recentPosts);
+      const candidateRecord: AttemptRecord = {
+        context,
+        post,
+        safety,
+        hard,
+        finalApproved: safety.approved && hard.ok,
+      };
+
+      if (candidateRecord.finalApproved) {
+        finalRecord = candidateRecord;
+        break;
+      }
+
+      const reason = rejectionReason(candidateRecord);
+      const savedRejected = await saveAttempt(candidateRecord, {
+        status: "rejected",
+        xPostId: null,
+        errorMessage:
+          candidateAttempt < MAX_CANDIDATE_ATTEMPTS
+            ? `Rejected before rewrite attempt ${candidateAttempt + 1}: ${reason}`
+            : `Rejected after ${MAX_CANDIDATE_ATTEMPTS} candidate attempts: ${reason}`,
+      });
+      savedRejectedAttemptId = savedRejected.id;
+
+      rewriteFeedback.push({
+        source: safety.approved ? "hardBlock" : "safety",
+        reason,
+        post_type: post.post_type,
+        text: post.text,
+      });
     }
-    const hard = hardBlock(post.text, context.recentPosts);
 
     const [todayPostedCount, dailyLimit] = await Promise.all([
       getTodayPostedCount(),
@@ -129,24 +184,36 @@ export async function GET(req: Request) {
       : conservativeDailyLimit(strategyHealth, dailyLimit);
     const underDailyLimit = todayPostedCount < effectiveDailyLimit;
     const dryRun = process.env.DRY_RUN === "true";
-    const safe = safety.approved && hard.ok;
+
+    if (!finalRecord) {
+      return Response.json({
+        status: "rejected",
+        attempt_id: savedRejectedAttemptId,
+        hour_number: context.hourNumber,
+        candidate_attempts: rewriteFeedback.length,
+        rewrite_reasons: rewriteFeedback.map((item) => item.reason),
+        today_posted_count: todayPostedCount,
+        daily_limit: effectiveDailyLimit,
+        settings_daily_limit: dailyLimit,
+        strategy_target_posts_today: strategyTarget ?? null,
+        dry_run: dryRun,
+      });
+    }
 
     let status: AttemptStatus;
     let xPostId: string | null = null;
 
-    if (!safe) {
-      status = "rejected";
-    } else if (dryRun || !underDailyLimit) {
+    if (dryRun || !underDailyLimit) {
       status = "logged_only";
     } else {
-      xPostId = await postToX(post.text);
+      xPostId = await postToX(finalRecord.post.text);
       // postToX is a Phase 5 stub returning null. Only claim "posted"
       // when we actually got an id back.
       status = xPostId ? "posted" : "logged_only";
     }
 
     const saved = await saveAttempt(
-      { context, post, safety, hard, finalApproved: safe },
+      finalRecord,
       { status, xPostId, errorMessage: null },
     );
 
@@ -158,6 +225,8 @@ export async function GET(req: Request) {
       daily_limit: effectiveDailyLimit,
       settings_daily_limit: dailyLimit,
       strategy_target_posts_today: strategyTarget ?? null,
+      candidate_attempts: rewriteFeedback.length + 1,
+      rewrite_reasons: rewriteFeedback.map((item) => item.reason),
       dry_run: dryRun,
     });
   } catch (err) {

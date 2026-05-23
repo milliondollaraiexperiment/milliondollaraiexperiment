@@ -1,4 +1,5 @@
 import type { HardBlockResult } from "./types";
+import { X_POST_MAX_CHARACTERS } from "./xPostLimits";
 
 // Multi-word red-line phrases. Single broad words like "charity" /
 // "profit" / "investment" / "emergency" used to live here, but they
@@ -61,7 +62,6 @@ const BANNED_PHRASES = [
 
 const SIMILARITY_THRESHOLD = 0.94;
 const SIMILARITY_WINDOW = 5; // compare only against the last N recent posts
-const MAX_LENGTH = 270;
 const MENTION_REGEX = /\B@\w+/;
 const HASHTAG_REGEX = /#[A-Za-z][A-Za-z0-9_]*/g;
 const ALLOWED_HASHTAGS = new Set(["#AI", "#BuildInPublic", "#SocialExperiment"]);
@@ -70,7 +70,7 @@ const RAW_TELEMETRY_LABELS = ["hour:", "balance:", "attempts:", "delta:", "statu
 export function hardBlock(text: string, recentPosts: string[] = []): HardBlockResult {
   const lower = text.toLowerCase();
 
-  if (text.length > MAX_LENGTH) {
+  if (text.length > X_POST_MAX_CHARACTERS) {
     return { ok: false, reason: "Post is too long" };
   }
 

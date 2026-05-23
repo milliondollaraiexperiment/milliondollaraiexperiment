@@ -1,5 +1,6 @@
 import { createJsonResponse, MONTHLY_SUMMARY_MODEL, SUMMARY_MODEL } from "./openai";
 import { getGoalCents } from "./summaryMetrics";
+import { X_SUMMARY_POST_MAX_CHARACTERS } from "./xPostLimits";
 import type { ThreadCandidate } from "./types";
 import type { DailySummaryRecord, PeriodSummaryRecord, SummaryPostType } from "./summaryTypes";
 
@@ -71,8 +72,10 @@ function validateAnalysis(raw: AnalysisResult): AnalysisResult {
     throw new Error(`Summary AI returned invalid analysis post count: ${posts.length}`);
   }
   for (const [index, post] of posts.entries()) {
-    if (post.length > 270) {
-      throw new Error(`Summary AI returned analysis post ${index + 1} over 270 characters`);
+    if (post.length > X_SUMMARY_POST_MAX_CHARACTERS) {
+      throw new Error(
+        `Summary AI returned analysis post ${index + 1} over ${X_SUMMARY_POST_MAX_CHARACTERS} characters`,
+      );
     }
   }
   if (!publicStrategyNote) {
@@ -92,7 +95,7 @@ async function generateAnalysis(args: {
 The first thread post is generated deterministically elsewhere. Do not repeat all headline numbers.
 Use only the provided metrics. Do not invent donations, fees, attempts, or outcomes.
 Dry, transparent, specific. No charity, emergency, investment, rewards, equity, returns, lottery, raffle, pressure, DMs, or @mentions.
-Return short X-thread continuation posts and strategy lessons learned.`,
+Return readable X-thread continuation posts and strategy lessons learned. Keep each post under ${X_SUMMARY_POST_MAX_CHARACTERS} characters.`,
     input: JSON.stringify(args.summary, null, 2),
     schemaName: "summary_analysis",
     schema: ANALYSIS_SCHEMA,
@@ -118,8 +121,10 @@ export async function generateSummaryThread(
   const analysis = await generateAnalysis({ kind, summary });
   const posts = [header, ...analysis.posts].slice(0, 4);
   for (const [index, post] of posts.entries()) {
-    if (post.length > 270) {
-      throw new Error(`Summary thread post ${index + 1} over 270 characters`);
+    if (post.length > X_SUMMARY_POST_MAX_CHARACTERS) {
+      throw new Error(
+        `Summary thread post ${index + 1} over ${X_SUMMARY_POST_MAX_CHARACTERS} characters`,
+      );
     }
   }
   return {

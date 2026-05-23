@@ -2,6 +2,7 @@ import { requireCronBearer } from "@/lib/adminAuth";
 import { getAiHealthMap } from "@/lib/aiHealth";
 import { getStrategyHealth } from "@/lib/strategyHealth";
 import { getProjectSettings, isPostingPaused } from "@/lib/projectState";
+import { getLatestSchedulerRun } from "@/lib/schedulerRuns";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,17 @@ export async function GET(req: Request) {
   const authError = requireCronBearer(req);
   if (authError) return authError;
 
-  const [settings, aiHealth, strategyHealth, latestHourly, latestDaily, latestPosted, latestDonation] =
+  const [
+    settings,
+    aiHealth,
+    strategyHealth,
+    latestHourly,
+    latestDaily,
+    latestPosted,
+    latestDonation,
+    latestHourlyScheduler,
+    latestDailyScheduler,
+  ] =
     await Promise.all([
       getProjectSettings(),
       getAiHealthMap(),
@@ -59,6 +70,8 @@ export async function GET(req: Request) {
           .limit(1)
           .maybeSingle(),
       ),
+      getLatestSchedulerRun("hourly"),
+      getLatestSchedulerRun("daily"),
     ]);
 
   return Response.json({
@@ -74,6 +87,10 @@ export async function GET(req: Request) {
     strategy_health: strategyHealth,
     latest_hourly_run: latestHourly,
     latest_daily_run: latestDaily,
+    latest_scheduler_runs: {
+      hourly: latestHourlyScheduler,
+      daily: latestDailyScheduler,
+    },
     latest_x_post: latestPosted,
     latest_stripe_webhook: latestDonation,
     generated_at: new Date().toISOString(),

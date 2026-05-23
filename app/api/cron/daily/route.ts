@@ -17,6 +17,7 @@ import {
 import { buildDailySummaryBase } from "@/lib/summaryMetrics";
 import { buildMonthlySummary, buildWeeklySummary } from "@/lib/periodSummaries";
 import { saveDailySummary, savePeriodSummary } from "@/lib/summaryStorage";
+import { recordSchedulerRun } from "@/lib/schedulerRuns";
 import { getAiHealth, recordAiFailure, recordAiSuccess } from "@/lib/aiHealth";
 import type { AttemptStatus, HardBlockResult, SafetyResult } from "@/lib/types";
 import type {
@@ -166,6 +167,8 @@ async function publishSummaryThread(
 }
 
 export async function GET(req: Request) {
+  const startedAt = new Date().toISOString();
+  const schedulerSource = req.headers.get("x-scheduler-source") ?? "unknown";
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     return Response.json({ error: "CRON_SECRET not configured on the server" }, { status: 500 });
@@ -186,10 +189,20 @@ export async function GET(req: Request) {
           : await markProjectCompleted(completion.settings);
 
       if (settings.final_post_sent) {
-        return Response.json({
+        const response = {
           status: "skipped",
           reason: "project completed and final thread already sent",
+        };
+        await recordSchedulerRun({
+          job: "daily",
+          source: schedulerSource,
+          status: response.status,
+          reason: response.reason,
+          statusCode: 200,
+          response,
+          startedAt,
         });
+        return Response.json(response);
       }
 
       const dryRun = process.env.DRY_RUN === "true";
@@ -234,14 +247,24 @@ export async function GET(req: Request) {
       }
 
       await markProjectCompleted(settings, { final_post_sent: true });
-      return Response.json({
+      const response = {
         status,
         attempt_id: data.id,
         posts: FINAL_THREAD_POSTS.length,
         final: true,
         dry_run: dryRun,
         paused,
+      };
+      await recordSchedulerRun({
+        job: "daily",
+        source: schedulerSource,
+        status,
+        reason: "project completed final report",
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const window = getDailySummaryWindow(completion.settings.started_at);
@@ -253,13 +276,23 @@ export async function GET(req: Request) {
     });
     dailyRunId = dailyRun.id;
     if (!dailyRun.allowed) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: dailyRun.reason,
         daily_run_status: dailyRun.status,
         daily_run_id: dailyRun.id,
         et_date: window.etDate,
+      };
+      await recordSchedulerRun({
+        job: "daily",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const allowXPost = !isPostingPaused(completion.settings);
@@ -358,6 +391,15 @@ export async function GET(req: Request) {
       posting_paused: !allowXPost,
     };
     await completeDailyRun(dailyRunId, response);
+    await recordSchedulerRun({
+      job: "daily",
+      source: schedulerSource,
+      status: response.status,
+      reason: strategyError ?? dailyThreadError,
+      statusCode: 200,
+      response,
+      startedAt,
+    });
     return Response.json(response);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -379,6 +421,15 @@ export async function GET(req: Request) {
       // intentional swallow
     }
 
+    await recordSchedulerRun({
+      job: "daily",
+      source: schedulerSource,
+      status: "failed",
+      reason: message,
+      statusCode: 500,
+      response: { error: message },
+      startedAt,
+    });
     return Response.json({ error: message }, { status: 500 });
   }
 }

@@ -30,6 +30,7 @@ jobs:
           fi
           response=$(curl -sS -o /tmp/body -w "%{http_code}" \
             -H "Authorization: Bearer $CRON_SECRET" \
+            -H "X-Scheduler-Source: github-actions" \
             "$PRODUCTION_URL/api/cron/hourly")
           echo "HTTP $response"
           cat /tmp/body

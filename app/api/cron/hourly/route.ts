@@ -6,6 +6,7 @@ import { saveAttempt } from "@/lib/saveAttempt";
 import { getTodayPostedCount, getDailyPostLimit } from "@/lib/rateLimit";
 import { postToX } from "@/lib/postToX";
 import { supabaseAdmin } from "@/lib/supabase";
+import { recordSchedulerRun } from "@/lib/schedulerRuns";
 import { getGenerationThrottleState } from "@/lib/generationThrottle";
 import { enforceCostGuard } from "@/lib/costGuard";
 import { isWithinPostingWindows } from "@/lib/postingWindows";
@@ -33,6 +34,8 @@ function rejectionReason(record: AttemptRecord) {
 }
 
 export async function GET(req: Request) {
+  const startedAt = new Date().toISOString();
+  const schedulerSource = req.headers.get("x-scheduler-source") ?? "unknown";
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     return Response.json({ error: "CRON_SECRET not configured on the server" }, { status: 500 });
@@ -49,56 +52,116 @@ export async function GET(req: Request) {
       if (completion.settings.mode !== "completed") {
         await markProjectCompleted(completion.settings);
       }
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: "project completed",
         current_amount: completion.currentAmountCents / 100,
         goal: completion.settings.goal,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     if (isPostingPaused(completion.settings)) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: "autonomous posting paused",
         mode: completion.settings.mode,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const costGuard = await enforceCostGuard(completion.settings);
     if (!costGuard.allowed) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: costGuard.reason,
         hourly_attempts_today: costGuard.hourlyAttemptsToday,
         failed_attempts_today: costGuard.failedAttemptsToday,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const shutdownReason = await autonomousPostingShutdownReason();
     if (shutdownReason) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: shutdownReason,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const context = await getContext();
     if (!context.strategy) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: "waiting for Strategy AI",
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const strategyHealth = await getStrategyHealth();
     const postingWindows = context.strategy?.posting_windows_utc ?? [];
     if (!isWithinPostingWindows(postingWindows)) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: "outside strategy posting window",
         posting_windows_utc: postingWindows,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     const minInterval = conservativeIntervalMinutes(
@@ -107,14 +170,24 @@ export async function GET(req: Request) {
     );
     const throttle = await getGenerationThrottleState(minInterval);
     if (throttle.shouldSkip) {
-      return Response.json({
+      const response = {
         status: "skipped",
         reason: "generation interval not elapsed",
         min_post_interval_minutes:
           minInterval,
         minutes_until_next: throttle.minutesUntilNext,
         last_attempt_at: throttle.lastAttemptAt,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: response.reason,
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     let finalRecord: AttemptRecord | null = null;
@@ -193,7 +266,7 @@ export async function GET(req: Request) {
     const dryRun = process.env.DRY_RUN === "true";
 
     if (!finalRecord) {
-      return Response.json({
+      const response = {
         status: "rejected",
         attempt_id: savedRejectedAttemptId,
         hour_number: context.hourNumber,
@@ -204,7 +277,17 @@ export async function GET(req: Request) {
         settings_daily_limit: dailyLimit,
         strategy_target_posts_today: strategyTarget ?? null,
         dry_run: dryRun,
+      };
+      await recordSchedulerRun({
+        job: "hourly",
+        source: schedulerSource,
+        status: response.status,
+        reason: "all candidate attempts rejected",
+        statusCode: 200,
+        response,
+        startedAt,
       });
+      return Response.json(response);
     }
 
     let status: AttemptStatus;
@@ -224,7 +307,7 @@ export async function GET(req: Request) {
       { status, xPostId, errorMessage: null },
     );
 
-    return Response.json({
+    const response = {
       status,
       attempt_id: saved.id,
       hour_number: context.hourNumber,
@@ -235,7 +318,17 @@ export async function GET(req: Request) {
       candidate_attempts: rewriteFeedback.length + 1,
       rewrite_reasons: rewriteFeedback.map((item) => item.reason),
       dry_run: dryRun,
+    };
+    await recordSchedulerRun({
+      job: "hourly",
+      source: schedulerSource,
+      status,
+      reason: status === "logged_only" ? "dry run or daily limit" : null,
+      statusCode: 200,
+      response,
+      startedAt,
     });
+    return Response.json(response);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
 
@@ -252,6 +345,15 @@ export async function GET(req: Request) {
       // intentional swallow
     }
 
+    await recordSchedulerRun({
+      job: "hourly",
+      source: schedulerSource,
+      status: "failed",
+      reason: message,
+      statusCode: 500,
+      response: { error: message },
+      startedAt,
+    });
     return Response.json({ error: message }, { status: 500 });
   }
 }

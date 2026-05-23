@@ -1,0 +1,12 @@
+name = "million-dollar-ai-scheduler"
+main = "scheduler-worker.js"
+compatibility_date = "2026-05-23"
+
+[triggers]
+crons = [
+  "*/15 * * * *",
+  "0,15,30,45 4,5 * * *"
+]
+
+[vars]
+PRODUCTION_URL = "https://themilliondollaraiexperiment.com"

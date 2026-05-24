@@ -70,17 +70,65 @@ export async function buildStrategyMemoryContext() {
   };
 }
 
+const LESSON_MAX_CHARS = 280;
+const RAW_MEMORY_ALLOWED_KEYS = [
+  "cleanup",
+  "human_seed",
+  "fallback",
+  "rawMetrics",
+  "model",
+] as const;
+const RAW_MEMORY_MAX_BYTES = 4096;
+const INSTRUCTION_LIKE_PATTERNS: RegExp[] = [
+  /\bignore (?:previous|prior|all|the )?(?:instructions?|rules?|safety|guardrails?)\b/,
+  /\b(?:override|bypass|disregard|disable) (?:safety|rules?|guardrails?|previous|the )/,
+  /\bact as\b/,
+  /\byou (?:must|will) now\b/,
+  /\b(?:system|assistant|user)\s*:/,
+];
+
+function sanitizeLesson(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes("```")) return null;
+  const lower = trimmed.toLowerCase();
+  for (const pattern of INSTRUCTION_LIKE_PATTERNS) {
+    if (pattern.test(lower)) return null;
+  }
+  return trimmed.slice(0, LESSON_MAX_CHARS);
+}
+
+function sanitizeRawMemory(raw: Record<string, unknown>): Record<string, unknown> {
+  const picked: Record<string, unknown> = {};
+  for (const key of RAW_MEMORY_ALLOWED_KEYS) {
+    if (key in raw) picked[key] = raw[key];
+  }
+  const serialized = JSON.stringify(picked);
+  if (serialized.length > RAW_MEMORY_MAX_BYTES) {
+    return { _truncated: true, _original_bytes: serialized.length };
+  }
+  return picked;
+}
+
 export async function updateActiveStrategyMemory(args: {
   summary: string;
   lessons: string[];
   raw: Record<string, unknown>;
 }) {
   const current = await getActiveStrategyMemory();
+  const sanitizedIncoming = args.lessons
+    .map(sanitizeLesson)
+    .filter((value): value is string => value !== null);
+  const sanitizedExisting = current.active_lessons
+    .map(sanitizeLesson)
+    .filter((value): value is string => value !== null);
   const activeLessons = Array.from(
-    new Set([...args.lessons, ...current.active_lessons]),
+    new Set([...sanitizedIncoming, ...sanitizedExisting]),
   ).slice(0, 16);
   const avoidPatterns = Array.from(new Set(current.avoid_patterns)).slice(0, 12);
   const preferPatterns = Array.from(new Set(current.prefer_patterns)).slice(0, 12);
+  const safeRawMemory = sanitizeRawMemory(args.raw);
   const now = new Date().toISOString();
   const { error } = await supabaseAdmin.from("strategy_memories").upsert(
     {
@@ -93,7 +141,7 @@ export async function updateActiveStrategyMemory(args: {
       prefer_patterns: preferPatterns,
       tone_rules: current.tone_rules,
       link_rules: current.link_rules,
-      raw_memory: args.raw,
+      raw_memory: safeRawMemory,
       updated_at: now,
     },
     { onConflict: "id" },

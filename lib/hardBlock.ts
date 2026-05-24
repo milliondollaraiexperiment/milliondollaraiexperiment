@@ -65,7 +65,17 @@ const SIMILARITY_WINDOW = 5; // compare only against the last N recent posts
 const MENTION_REGEX = /\B@\w+/;
 const HASHTAG_REGEX = /#[A-Za-z][A-Za-z0-9_]*/g;
 const ALLOWED_HASHTAGS = new Set(["#AI", "#BuildInPublic", "#SocialExperiment"]);
-const RAW_TELEMETRY_LABELS = ["hour:", "balance:", "attempts:", "delta:", "status:"];
+const RAW_TELEMETRY_LABELS = [
+  "hour:",
+  "balance:",
+  "attempts:",
+  "delta:",
+  "status:",
+  "posted:",
+  "rejected:",
+  "donations:",
+];
+const DAILY_HEADER_LABELS = ["attempts:", "posted:", "rejected:", "donations:", "balance:"];
 
 export function hardBlock(text: string, recentPosts: string[] = []): HardBlockResult {
   const lower = text.toLowerCase();
@@ -108,12 +118,22 @@ export function hardBlock(text: string, recentPosts: string[] = []): HardBlockRe
 
 function looksLikeRawTelemetryBlock(lower: string): boolean {
   const labelCount = RAW_TELEMETRY_LABELS.filter((label) => lower.includes(label)).length;
-  return (
+  // Original arm: scheduler-style "hour: / delta: / status:" telemetry.
+  if (
     labelCount >= 4 &&
     lower.includes("hour:") &&
     lower.includes("delta:") &&
     lower.includes("status:")
-  );
+  ) {
+    return true;
+  }
+  // Second arm: daily-report-style header (attempts/posted/rejected/donations/balance).
+  // Catches summary-thread headers if they ever reach an X post path.
+  const dailyHeaderHits = DAILY_HEADER_LABELS.filter((label) => lower.includes(label)).length;
+  if (labelCount >= 3 && dailyHeaderHits >= 2) {
+    return true;
+  }
+  return false;
 }
 
 function bigrams(s: string): Map<string, number> {

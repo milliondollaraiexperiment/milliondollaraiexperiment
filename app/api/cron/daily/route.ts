@@ -107,12 +107,25 @@ async function publishSummaryThread(
   const safe = safety.approved && hard.ok;
   const dryRun = process.env.DRY_RUN === "true";
 
+  // Summary threads (daily/weekly/monthly) publish to the website public log only.
+  // They are intentionally never posted to X — raw summary/strategy/scheduler
+  // artifacts as ordinary X posts was the bug-window incident the clean launch
+  // hardened against. See strategy_memories.avoid_patterns for the lesson.
   let status: AttemptStatus;
 
   if (!safe) {
     status = "rejected";
   } else {
     status = "logged_only";
+  }
+
+  // Forward-protection: if a future edit ever wires posting into this function,
+  // this assertion will fail loudly instead of silently leaking summary content
+  // to X without idempotency / scheduling guards.
+  if ((status as string) === "posted") {
+    throw new Error(
+      "publishSummaryThread must not set status='posted'; summary threads are website-log only",
+    );
   }
 
   const { data, error } = await supabaseAdmin

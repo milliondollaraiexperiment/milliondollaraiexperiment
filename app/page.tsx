@@ -17,7 +17,7 @@ import {
   WRITER_MODEL,
   WRITER_SECOND_FALLBACK_MODEL,
 } from "@/lib/openai";
-import { getRecentPlanEntries, type PlanEntry, type PlanOutcome } from "@/lib/planLog";
+import { getRecentPlanEntries, type PlanEntry } from "@/lib/planLog";
 import { X_PROFILE_URL } from "@/lib/publicUrls";
 import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
 import { getStrategyHealth } from "@/lib/strategyHealth";
@@ -679,57 +679,40 @@ function RulesSection() {
   );
 }
 
-const PLAN_OUTCOME_PILL: Record<PlanOutcome, { className: string; label: string }> = {
-  done: { className: "bg-emerald-600/[0.12] text-emerald-800", label: "done" },
-  blocked: { className: "bg-rose-600/[0.12] text-rose-800", label: "blocked" },
-  pending: { className: "bg-amber-500/[0.18] text-amber-800", label: "pending" },
-  superseded: { className: "bg-zinc-500/[0.15] text-zinc-700", label: "superseded" },
-};
-
 function PlanLogPreview({ entries }: { entries: PlanEntry[] }) {
   if (entries.length === 0) return null;
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <SectionHeader kicker="AI proposes. Human executes." title="Latest entries from the plan log.">
         Every infrastructure decision is the AI proposing, the human doing the
-        boring real-world work, and the outcome being filed publicly —
-        including the ones that blocked us.
+        boring real-world work, and the event being filed publicly — including
+        the ones that blocked us.
       </SectionHeader>
       <ol className="grid gap-4 lg:grid-cols-3">
-        {entries.map((entry) => {
-          const pill = PLAN_OUTCOME_PILL[entry.outcome];
-          return (
-            <li
-              key={entry.id}
-              className="flex flex-col rounded-[1.25rem] border border-zinc-950/10 bg-white/[0.66] p-5 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500">
-                  {entry.date}
+        {entries.map((entry) => (
+          <li
+            key={entry.id}
+            className="flex flex-col rounded-[1.25rem] border border-zinc-950/10 bg-white/[0.66] p-5 shadow-sm"
+          >
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500">
+              {entry.date}
+            </p>
+            <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-700">
+              <div>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  AI proposed
                 </p>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wider ${pill.className}`}
-                >
-                  {pill.label}
-                </span>
+                <p className="mt-1 text-zinc-800">{entry.ai_proposed}</p>
               </div>
-              <div className="mt-4 space-y-3 text-sm leading-6 text-zinc-700">
-                <div>
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                    AI proposed
-                  </p>
-                  <p className="mt-1 text-zinc-800">{entry.ai_proposed}</p>
-                </div>
-                <div>
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                    Human did
-                  </p>
-                  <p className="mt-1 text-zinc-800">{entry.human_did}</p>
-                </div>
+              <div>
+                <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Human did
+                </p>
+                <p className="mt-1 text-zinc-800">{entry.human_did}</p>
               </div>
-            </li>
-          );
-        })}
+            </div>
+          </li>
+        ))}
       </ol>
       <div className="mt-8 text-center">
         <Link

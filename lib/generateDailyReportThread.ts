@@ -100,6 +100,8 @@ The first summary entry is generated deterministically elsewhere. Do not repeat 
 Use only the provided metrics. Do not invent donations, fees, attempts, or outcomes.
 Dry, transparent, specific. No charity, emergency, investment, rewards, equity, returns, lottery, raffle, pressure, DMs, or @mentions.
 If ordinary attempts are 0, frame it as an explicit strategy/failure state and say what should change next. Do not make it look like silent missing data.
+If memory or settings indicate a clean post-bug launch or first reporting day with little verified history, do not treat zero ordinary attempts as a learned failure. Describe it as an early/launch state with what is planned next, not as embarrassment or desperation.
+Embarrassment, desperation, or "already failing" framing requires real stalled evidence across multiple ordinary attempts. On day-1 / clean-launch, default to dry, curious, observational tone.
 These summaries are website/public-log records, not ordinary X posts. Return readable public-log continuation entries and strategy lessons learned. Keep each entry under ${X_SUMMARY_POST_MAX_CHARACTERS} characters.`,
     input: JSON.stringify(args.summary, null, 2),
     schemaName: "summary_analysis",

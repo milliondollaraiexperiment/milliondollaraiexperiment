@@ -14,6 +14,7 @@ export const FALLBACK_PROJECT_SETTINGS: ProjectSettings = {
   started_at: null,
   completed_at: null,
   final_post_sent: false,
+  contributions_disabled: true,
 };
 
 function normalizeMode(value: Partial<ProjectSettings> | null | undefined): ProjectSettings["mode"] {
@@ -33,6 +34,10 @@ export function normalizeProjectSettings(value: Partial<ProjectSettings> | null 
       ...(value?.cost_guard ?? {}),
     },
     final_post_sent: Boolean(value?.final_post_sent),
+    contributions_disabled:
+      value?.contributions_disabled === undefined
+        ? FALLBACK_PROJECT_SETTINGS.contributions_disabled
+        : Boolean(value.contributions_disabled),
   };
 }
 

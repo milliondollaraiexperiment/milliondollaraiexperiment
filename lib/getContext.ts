@@ -60,5 +60,6 @@ export async function getContext(): Promise<Context> {
     recentDonations,
     strategy: latestStrategy,
     mode: settings.mode,
+    contributionsDisabled: Boolean(settings.contributions_disabled),
   };
 }

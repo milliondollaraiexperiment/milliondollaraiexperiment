@@ -149,6 +149,7 @@ Rules:
 - Guardrails define the forbidden zone, not the creative ceiling. Inside those boundaries, optimize aggressively for attention, trust, and voluntary conversion.
 - If memory says this is a clean post-bug launch, ignore scheduler, daily-summary, raw-strategy-thread, or accidental-system-post artifacts from the bug window. Treat those as invalid operations data, not audience or content signal.
 - First-day cold_start should be clean, legible, curious, and direct. Do not recommend embarrassment, desperation, humiliation, or "already failing" tone before there is real stalled evidence from ordinary attempts.
+- If rawMetrics.contributions_disabled is TRUE, voluntary contributions are temporarily paused. Do NOT recommend direct_ask as a format, do NOT set forced_format to "direct_ask", set direct_ask_cadence_hours to its maximum (24), and make link_policy and tone_guidance reflect that contributions are paused. Acknowledgment of the pause in posts must never name the payment processor, promise a date, or frame it as urgent.
 - Prefer formats that cleared checks or looked less repetitive.
 - Use rejection reasons to avoid unsafe or boring angles.
 - Direct asks are allowed, but must remain voluntary, public, non-urgent, and non-transactional.
@@ -230,15 +231,24 @@ function sanitizeStrategy(
   rawMetrics: Record<string, unknown>,
   model: string,
 ): StrategyRecord {
-  const preferred = parsed.preferred_formats.filter((format) => VALID_FORMAT_SET.has(format));
+  const contributionsDisabled = rawMetrics.contributions_disabled === true;
+  const preferred = parsed.preferred_formats
+    .filter((format) => VALID_FORMAT_SET.has(format))
+    .filter((format) => !(contributionsDisabled && format === "direct_ask"));
   const forcedFormat =
     parsed.forced_format && VALID_FORMAT_SET.has(parsed.forced_format)
-      ? parsed.forced_format
+      ? contributionsDisabled && parsed.forced_format === "direct_ask"
+        ? null
+        : parsed.forced_format
       : null;
 
   return {
     summary: parsed.summary.trim(),
-    preferred_formats: preferred.length ? preferred : ["direct_ask", "one_liner"],
+    preferred_formats: preferred.length
+      ? preferred
+      : contributionsDisabled
+        ? ["terminal_status", "one_liner"]
+        : ["direct_ask", "one_liner"],
     forced_format: forcedFormat,
     banned_angles: parsed.banned_angles.map((angle) => angle.trim()).filter(Boolean).slice(0, 6),
     rewrite_guidance: parsed.rewrite_guidance.trim(),
@@ -306,11 +316,12 @@ function shouldFallbackStrategyModel(err: unknown): boolean {
 
 function deterministicFallbackStrategy(rawMetrics: Record<string, unknown>, failures: number): StrategyRecord {
   const recoveryMode = failures >= 5;
+  const contributionsDisabled = rawMetrics.contributions_disabled === true;
   return {
     summary: recoveryMode
       ? "Strategy AI is in recovery mode. Use one conservative readable public status note and do not direct ask until Strategy recovers."
       : "Strategy AI fallback is active. Use conservative readable public status notes until the next successful Strategy run.",
-    preferred_formats: recoveryMode
+    preferred_formats: recoveryMode || contributionsDisabled
       ? ["terminal_status", "incident_report"]
       : ["terminal_status", "incident_report", "direct_ask"],
     forced_format: null,
@@ -410,6 +421,8 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
   };
   const [settings, totalRaisedCents] = await Promise.all([getProjectSettings(), getTotalRaisedCents()]);
   const goalCents = settings.goal * 100;
+  const contributionsDisabled = Boolean(settings.contributions_disabled);
+  (rawMetrics as Record<string, unknown>).contributions_disabled = contributionsDisabled;
 
   const userContent = JSON.stringify(
     {

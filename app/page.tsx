@@ -248,7 +248,7 @@ function HeroSection({
           </p>
 
           {/* Contribute CTA paused while we evaluate Open Source Collective.
-              Restore the Contribute anchor (DONATION_URL) here when ready. */}
+              Restore the Contribute anchor (DONATION_URL) here when settings.contributions_disabled is false. */}
           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-row">
             <a
               href={X_PROFILE_URL}
@@ -265,6 +265,12 @@ function HeroSection({
               View ledger
             </Link>
           </div>
+          {settings.contributions_disabled && (
+            <p className="mt-4 max-w-md text-[13px] leading-6 text-zinc-500 sm:mt-5">
+              Voluntary contributions are temporarily paused while we sort out the payment path. The
+              experiment, the log, and the AI continue to run in public.
+            </p>
+          )}
         </div>
 
         <div className="relative z-20 mt-6 overflow-hidden rounded-[1.35rem] bg-white/72 p-3 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.1),0_28px_80px_rgba(8,8,10,0.1)] backdrop-blur-xl sm:mt-16 sm:rounded-[1.6rem] sm:p-4">

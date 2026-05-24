@@ -7,6 +7,7 @@ export type Context = {
   recentDonations: { amount: number; message: string | null }[];
   strategy: StrategyRecord | null;
   mode: ProjectMode;
+  contributionsDisabled: boolean;
 };
 
 export type PostCandidate = {
@@ -82,4 +83,5 @@ export type ProjectSettings = {
   started_at?: string | null;
   completed_at?: string | null;
   final_post_sent?: boolean;
+  contributions_disabled?: boolean;
 };

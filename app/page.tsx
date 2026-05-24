@@ -69,6 +69,13 @@ function elapsedSecondsFromStartedAt(startedAt: string | null | undefined): numb
   return Math.max(0, Math.floor((Date.now() - startedMs) / 1000));
 }
 
+function startOfTodayUtcIso(): string {
+  const now = new Date();
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  ).toISOString();
+}
+
 async function loadData() {
   const [
     settingsRes,
@@ -80,6 +87,9 @@ async function loadData() {
     rejectedRes,
     failedRes,
     lastPostedRes,
+    todayAttemptsRes,
+    todayPostedRes,
+    todayFailedRes,
     latestStrategy,
     strategyHealth,
     aiHealth,
@@ -132,6 +142,20 @@ async function loadData() {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabaseAdmin
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startOfTodayUtcIso()),
+    supabaseAdmin
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "posted")
+      .gte("created_at", startOfTodayUtcIso()),
+    supabaseAdmin
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "failed")
+      .gte("created_at", startOfTodayUtcIso()),
     getLatestStrategy(),
     getStrategyHealth(),
     getAiHealthMap(),
@@ -166,6 +190,11 @@ async function loadData() {
       hour_number: number | null;
       created_at: string;
     } | null,
+    todayCounts: {
+      attempts: todayAttemptsRes.count ?? 0,
+      posted: todayPostedRes.count ?? 0,
+      failed: todayFailedRes.count ?? 0,
+    },
     latestStrategy,
     strategyHealth,
     aiHealth,
@@ -257,12 +286,12 @@ function HeroSection({
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-7 text-zinc-700 sm:mt-6 sm:text-lg sm:leading-8">
             An autonomous AI is trying to fill a $1,000,000 public ledger from humans, in public.
-            All contributions are held by a third-party fiscal host — never by the operator —
+            The contribution surface is paused while a third-party fiscal host is reviewed,
             and every post, rejection, dollar, and strategy change is logged.
           </p>
 
           {/* Contribute CTA paused while we evaluate Open Source Collective.
-              Restore the Contribute anchor (DONATION_URL) here when settings.contributions_disabled is false. */}
+              Restore the Contribute anchor only after CONTRIBUTION_URL points at an approved surface. */}
           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-row">
             <a
               href={X_PROFILE_URL}
@@ -326,10 +355,12 @@ function HealthBadge({ status }: { status: string }) {
 function SystemStatus({
   settings,
   lastPosted,
+  todayCounts,
   aiHealth,
 }: {
   settings: ProjectSettings;
   lastPosted: { hour_number: number | null; created_at: string } | null;
+  todayCounts: { attempts: number; posted: number; failed: number };
   aiHealth: Record<string, AiHealthRecord | null>;
 }) {
   const paused = isPostingPaused(settings);
@@ -346,6 +377,11 @@ function SystemStatus({
     : paused
       ? "paused — none expected"
       : "no successful post yet";
+
+  const costGuard = settings.cost_guard;
+  const costGuardLabel = costGuard?.enabled
+    ? `${costGuard.max_hourly_attempts_per_day ?? "?"} attempts/day · ${costGuard.max_failed_attempts_per_day ?? "?"} failures max`
+    : "disabled";
 
   return (
     <section className="rounded-2xl border border-zinc-950/10 bg-white/[0.62] p-5 shadow-sm">
@@ -370,9 +406,44 @@ function SystemStatus({
         <dt className="font-mono uppercase tracking-[0.12em] text-zinc-500">daily cap</dt>
         <dd className="font-mono text-zinc-700">{settings.daily_post_limit} posts/day</dd>
 
+        <dt className="font-mono uppercase tracking-[0.12em] text-zinc-500">cost guard</dt>
+        <dd className="font-mono text-zinc-700">{costGuardLabel}</dd>
+
         <dt className="font-mono uppercase tracking-[0.12em] text-zinc-500">last posted</dt>
         <dd className="font-mono text-zinc-700">{lastPostedLabel}</dd>
       </dl>
+
+      <div className="mt-5 border-t border-zinc-950/10 pt-4">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          Today (UTC)
+        </p>
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          <div className="rounded-xl bg-zinc-950/[0.045] p-3">
+            <p className="font-mono text-xl font-semibold tabular-nums text-zinc-950">
+              {todayCounts.attempts}
+            </p>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+              attempts
+            </p>
+          </div>
+          <div className="rounded-xl bg-zinc-950/[0.045] p-3">
+            <p className="font-mono text-xl font-semibold tabular-nums text-zinc-950">
+              {todayCounts.posted}
+            </p>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+              posted
+            </p>
+          </div>
+          <div className="rounded-xl bg-zinc-950/[0.045] p-3">
+            <p className="font-mono text-xl font-semibold tabular-nums text-zinc-950">
+              {todayCounts.failed}
+            </p>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+              failed
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-950/10 pt-4">
         {(["writer", "safety", "summary", "strategy"] as const).map((component) => (
@@ -809,6 +880,7 @@ export default async function Home() {
     rejected,
     failed,
     lastPosted,
+    todayCounts,
     latestStrategy,
     strategyHealth,
     aiHealth,
@@ -850,7 +922,12 @@ export default async function Home() {
         )}
 
         <section className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
-          <SystemStatus settings={settings} lastPosted={lastPosted} aiHealth={aiHealth} />
+          <SystemStatus
+            settings={settings}
+            lastPosted={lastPosted}
+            todayCounts={todayCounts}
+            aiHealth={aiHealth}
+          />
           <LatestStrategy strategy={latestStrategy} strategyHealth={strategyHealth} />
         </section>
 

@@ -23,6 +23,9 @@ export function SiteHeader() {
           <Link className="hidden hover:text-zinc-950 md:inline" href="/roadmap">
             Roadmap
           </Link>
+          <Link className="hidden hover:text-zinc-950 md:inline" href="/plan">
+            Plan
+          </Link>
           {/* Contribute CTA paused while we evaluate Open Source Collective.
               Re-enable by restoring the anchor below pointing at DONATION_URL. */}
           <a

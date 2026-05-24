@@ -28,6 +28,9 @@ export function SiteFooter() {
           <Link className="hover:text-white" href="/roadmap">
             Roadmap
           </Link>
+          <Link className="hover:text-white" href="/plan">
+            Plan
+          </Link>
           <Link className="hover:text-white" href="/privacy">
             Privacy
           </Link>

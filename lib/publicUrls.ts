@@ -11,6 +11,15 @@ export function absoluteUrl(path = "/") {
 }
 
 export function shareOnXUrl(text: string, url: string) {
-  const params = new URLSearchParams({ text, url });
+  let safeUrl = SITE_URL;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      safeUrl = parsed.toString();
+    }
+  } catch {
+    // fall through to SITE_URL
+  }
+  const params = new URLSearchParams({ text, url: safeUrl });
   return `https://x.com/intent/tweet?${params.toString()}`;
 }

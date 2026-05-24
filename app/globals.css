@@ -23,6 +23,52 @@ html {
   /* Always reserve space for the vertical scrollbar so navigating between
      short and tall pages doesn't shift content sideways. */
   scrollbar-gutter: stable;
+
+  /* Firefox: thin custom scrollbar tinted with the project's zinc palette
+     so it blends with the cream background instead of showing the bright
+     default Windows / Chrome chrome rail. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(8, 8, 10, 0.22) transparent;
+}
+
+/* WebKit (Chrome / Safari / Edge): match the same thin tinted look.
+   2px transparent border + background-clip:padding-box gives the thumb
+   a floating pill shape inside the gutter instead of filling edge-to-edge. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(8, 8, 10, 0.22);
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(8, 8, 10, 0.4);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    scrollbar-color: rgba(244, 244, 245, 0.22) transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(244, 244, 245, 0.22);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(244, 244, 245, 0.4);
+  }
 }
 
 body {

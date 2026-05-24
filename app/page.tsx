@@ -3,7 +3,6 @@ import Link from "next/link";
 import { AttemptCard } from "@/components/AttemptCard";
 import { ElapsedClock } from "@/components/ElapsedClock";
 import { ProgressBar } from "@/components/ProgressBar";
-import { RobotArt3DLazy } from "@/components/RobotArt3DLazy";
 import { MiniStat } from "@/components/site/MiniStat";
 import { Pill } from "@/components/site/Pill";
 import { SectionHeader } from "@/components/site/SectionHeader";
@@ -202,10 +201,15 @@ function RobotArt() {
       <div className="absolute inset-0 rounded-full border border-zinc-950/[0.055] bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.86),rgba(255,255,255,0.25)_36%,transparent_64%)] shadow-[inset_0_0_120px_rgba(255,255,255,0.7)]" />
       <div className="absolute inset-[9%] rounded-full border border-zinc-950/[0.045]" />
       <div className="absolute inset-[19%] rounded-full border border-dashed border-amber-400/25" />
-      <div className="pointer-events-auto absolute left-1/2 top-[51%] aspect-square w-[62%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.6rem] bg-zinc-950 p-3 shadow-[0_38px_90px_rgba(50,45,32,0.2)] sm:rounded-[2rem] sm:p-5">
-        <div className="relative h-full w-full">
-          <RobotArt3DLazy />
-        </div>
+      <div className="absolute left-1/2 top-[51%] w-[62%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.6rem] bg-zinc-950 p-3 shadow-[0_38px_90px_rgba(50,45,32,0.2)] sm:rounded-[2rem] sm:p-5">
+        <Image
+          src="/hero.png"
+          alt="A small white robot holding an empty bowl"
+          width={400}
+          height={400}
+          priority
+          className="aspect-square w-full object-contain"
+        />
       </div>
     </div>
   );

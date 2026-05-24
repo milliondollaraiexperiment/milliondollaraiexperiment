@@ -8,12 +8,12 @@ type AttemptShareArgs = {
 };
 
 function statusFilter(status: AttemptShareArgs["status"]) {
-  if (status === "posted" || status === "logged_only") return "visible";
+  if (status === "posted" || status === "logged_only") return "ordinary_posts";
   return status;
 }
 
 export function attemptAnchorUrl(id: string, status: AttemptShareArgs["status"]) {
-  return absoluteUrl(`/log?status=${statusFilter(status)}#attempt-${id}`);
+  return absoluteUrl(`/log?type=${statusFilter(status)}#attempt-${id}`);
 }
 
 export function attemptShareText({ status, postType, text }: AttemptShareArgs) {

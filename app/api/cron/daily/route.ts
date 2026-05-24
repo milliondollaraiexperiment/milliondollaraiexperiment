@@ -56,7 +56,6 @@ async function insertFailedThreadAttempt(postType: SummaryPostType, message: str
 async function publishSummaryThread(
   postType: SummaryPostType,
   summary: DailySummaryRecord | PeriodSummaryRecord,
-  options: { allowXPost: boolean } = { allowXPost: true },
 ) {
   const context = await getContext();
   const [summaryHealth, safetyHealth] = await Promise.all([
@@ -109,27 +108,11 @@ async function publishSummaryThread(
   const dryRun = process.env.DRY_RUN === "true";
 
   let status: AttemptStatus;
-  let xPostId: string | null = null;
-  let ids: string[] | null = null;
 
   if (!safe) {
     status = "rejected";
-  } else if (dryRun || !options.allowXPost) {
-    status = "logged_only";
   } else {
-    try {
-      ids = await postThreadToX(thread.posts);
-      status = ids?.length ? "posted" : "logged_only";
-      xPostId = ids?.join(",") ?? null;
-    } catch (err) {
-      if (err instanceof XThreadPostError) {
-        ids = err.postedIds;
-        status = "failed";
-        xPostId = ids.length ? ids.join(",") : null;
-      } else {
-        throw err;
-      }
-    }
+    status = "logged_only";
   }
 
   const { data, error } = await supabaseAdmin
@@ -142,12 +125,9 @@ async function publishSummaryThread(
       safety_score: safety.risk_score,
       safety_reasons: safety.reasons,
       hard_block_reason: hard.ok ? null : hard.reason,
-      x_post_id: xPostId,
+      x_post_id: null,
       public_strategy_note: thread.public_strategy_note,
-      error_message:
-        status === "failed"
-          ? `X thread partially failed after ${ids?.length ?? 0} posts. Posted ids recorded to prevent blind retry.`
-          : null,
+      error_message: null,
     })
     .select("id")
     .single();
@@ -161,7 +141,7 @@ async function publishSummaryThread(
     attemptId: data.id as string,
     posts: thread.posts,
     lessons: thread.lessons,
-    xPostIds: ids ?? [],
+    xPostIds: [],
     dryRun,
   };
 }
@@ -309,7 +289,7 @@ export async function GET(req: Request) {
     let dailyThreadStatus: string | null = null;
     let dailyThreadError: string | null = null;
     try {
-      const published = await publishSummaryThread("daily_summary_thread", dailySummary, { allowXPost });
+      const published = await publishSummaryThread("daily_summary_thread", dailySummary);
       dailyThreadStatus = published.status;
       dailySummary = await saveDailySummary({
         ...dailySummary,
@@ -329,7 +309,7 @@ export async function GET(req: Request) {
         const weekly = await buildWeeklySummary(dailySummary.dayNumber);
         if (weekly) {
           let savedWeekly = await savePeriodSummary(weekly);
-          const published = await publishSummaryThread("weekly_summary_thread", savedWeekly, { allowXPost });
+          const published = await publishSummaryThread("weekly_summary_thread", savedWeekly);
           weeklyThreadStatus = published.status;
           savedWeekly = await savePeriodSummary({
             ...savedWeekly,
@@ -353,7 +333,7 @@ export async function GET(req: Request) {
         });
         if (monthly) {
           let savedMonthly = await savePeriodSummary(monthly);
-          const published = await publishSummaryThread("monthly_summary_thread", savedMonthly, { allowXPost });
+          const published = await publishSummaryThread("monthly_summary_thread", savedMonthly);
           monthlyThreadStatus = published.status;
           savedMonthly = await savePeriodSummary({
             ...savedMonthly,

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 type Props = {
   initialElapsedSeconds: number;
   running: boolean;
+  compact?: boolean;
 };
 
 function splitElapsed(totalSeconds: number) {
@@ -28,7 +29,7 @@ function ClockUnit({ value, label }: { value: number; label: string }) {
   );
 }
 
-export function ElapsedClock({ initialElapsedSeconds, running }: Props) {
+export function ElapsedClock({ initialElapsedSeconds, running, compact = false }: Props) {
   const [elapsedSeconds, setElapsedSeconds] = useState(initialElapsedSeconds);
 
   useEffect(() => {
@@ -41,6 +42,23 @@ export function ElapsedClock({ initialElapsedSeconds, running }: Props) {
   }, [initialElapsedSeconds, running]);
 
   const units = useMemo(() => splitElapsed(elapsedSeconds), [elapsedSeconds]);
+
+  if (compact) {
+    return (
+      <div aria-label="Elapsed experiment time">
+        <p className="truncate font-mono text-xl font-semibold text-zinc-950 sm:text-4xl">
+          {units.months > 0 ? `${units.months}m ` : ""}
+          {units.days > 0 ? `${units.days}d ` : ""}
+          {units.hours.toString().padStart(2, "0")}:
+          {units.minutes.toString().padStart(2, "0")}:
+          {units.seconds.toString().padStart(2, "0")}
+        </p>
+        <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+          timer ticking
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

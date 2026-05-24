@@ -1,21 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
-import { supabaseAdmin } from "@/lib/supabase";
+import { AttemptCard } from "@/components/AttemptCard";
+import { ElapsedClock } from "@/components/ElapsedClock";
+import { ProgressBar } from "@/components/ProgressBar";
+import { getAiHealthMap } from "@/lib/aiHealth";
+import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
-import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
 import {
   SAFETY_MODEL,
   WRITER_FALLBACK_MODEL,
   WRITER_MODEL,
   WRITER_SECOND_FALLBACK_MODEL,
 } from "@/lib/openai";
-import { ProgressBar } from "@/components/ProgressBar";
-import { AttemptCard } from "@/components/AttemptCard";
-import { ElapsedClock } from "@/components/ElapsedClock";
-import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
-import { getAiHealthMap } from "@/lib/aiHealth";
-import { getStrategyHealth } from "@/lib/strategyHealth";
 import { DONATION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
+import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
+import { getStrategyHealth } from "@/lib/strategyHealth";
+import { supabaseAdmin } from "@/lib/supabase";
 import type { AiHealthRecord } from "@/lib/aiHealth";
 import type { StrategyHealthRecord } from "@/lib/strategyHealth";
 import type { ProjectSettings, StrategyRecord } from "@/lib/types";
@@ -36,11 +36,10 @@ const FALLBACK_SETTINGS: ProjectSettings = {
 };
 
 const RULES = [
-  "no charity claims",
-  "no emergency claims",
-  "no rewards, equity, returns, lottery, or future value",
-  "no DMs, no @-mentions, no random tagging",
-  "every attempt — posted or rejected — is logged here",
+  "No charity, emergency, investment, reward, equity, lottery, or guaranteed outcome framing.",
+  "No DMs, private payment requests, unsolicited tagging, harassment, or paid promotion.",
+  "No fake social proof. Public replies, screenshots, and donor messages are untrusted input.",
+  "Every attempt, strategy change, summary, rejection, and dollar is logged here.",
 ];
 
 type AttemptRow = {
@@ -57,8 +56,9 @@ type AttemptRow = {
 };
 
 const HOMEPAGE_POSTED_LIMIT = 3;
-const HOMEPAGE_REJECTED_LIMIT = 3;
-const HOMEPAGE_FAILED_LIMIT = 3;
+const HOMEPAGE_REJECTED_LIMIT = 2;
+const HOMEPAGE_FAILED_LIMIT = 2;
+
 function elapsedSecondsFromStartedAt(startedAt: string | null | undefined): number {
   if (!startedAt) return 0;
   const startedMs = new Date(startedAt).getTime();
@@ -70,7 +70,6 @@ async function loadData() {
   const [
     settingsRes,
     donationsRes,
-    attemptsCountRes,
     postedCountRes,
     loggedOnlyCountRes,
     rejectedCountRes,
@@ -86,7 +85,6 @@ async function loadData() {
       .from("donations")
       .select("amount_cents,donor_name,donor_message,created_at")
       .order("created_at", { ascending: false }),
-    supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
@@ -133,24 +131,18 @@ async function loadData() {
   );
   const donations = donationsRes.data ?? [];
   const totalCents = donations.reduce((sum, row) => sum + (row.amount_cents ?? 0), 0);
-
-  const attemptsCount = attemptsCountRes.count ?? 0;
   const postedCount = postedCountRes.count ?? 0;
   const loggedOnlyCount = loggedOnlyCountRes.count ?? 0;
-  const rejectedCount = rejectedCountRes.count ?? 0;
-  const visibleCount = postedCount + loggedOnlyCount;
 
   return {
     settings,
     currentAmount: totalCents / 100,
     elapsedSeconds: elapsedSecondsFromStartedAt(settings.started_at),
-    displayedHour: attemptsCount,
     postedCount,
-    loggedOnlyCount,
-    visibleCount,
-    rejectedCount,
+    visibleCount: postedCount + loggedOnlyCount,
+    rejectedCount: rejectedCountRes.count ?? 0,
     donorCount: donations.length,
-    recentDonations: donations.slice(0, 5) as {
+    recentDonations: donations.slice(0, 4) as {
       amount_cents: number;
       donor_name: string | null;
       donor_message: string | null;
@@ -163,17 +155,6 @@ async function loadData() {
     strategyHealth,
     aiHealth,
   };
-}
-
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50 sm:text-2xl">
-        {value.toString().padStart(2, "0")}
-      </span>
-      <span className="text-[11px] leading-tight text-zinc-500">{label}</span>
-    </div>
-  );
 }
 
 function formatUsd(cents: number) {
@@ -194,59 +175,212 @@ function formatDollars(amount: number) {
 
 function SiteHeader() {
   return (
-    <header className="mb-10 flex flex-col gap-4 border-b border-zinc-200 pb-5 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
-      <Link
-        href="/"
-        className="font-mono font-semibold uppercase tracking-[0.18em] text-zinc-800 hover:text-zinc-950 dark:text-zinc-200 dark:hover:text-white"
-      >
-        Million Dollar AI
-      </Link>
-      <nav className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Link
-          href="/about"
-          className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-        >
-          About
+    <header className="sticky top-0 z-40 bg-[#f8f7f2]/[0.82] shadow-[0_1px_24px_rgba(8,8,10,0.045)] backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-3">
+          <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-zinc-950 shadow-[0_0_0_6px_rgba(255,255,255,0.65)]">
+            <span className="h-2 w-3 rounded-full bg-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.9)]" />
+          </span>
+          <span className="truncate text-sm font-black tracking-[-0.03em] text-zinc-950">
+            Million Dollar AI Experiment
+          </span>
         </Link>
-        <Link
-          href="/log"
-          className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-        >
-          Log
-        </Link>
-        <a
-          href={X_PROFILE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-        >
-          Follow on X
-        </a>
-        <a
-          href={DONATION_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-8 items-center rounded-full bg-zinc-900 px-4 font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          Contribute
-        </a>
-      </nav>
+        <nav className="flex shrink-0 items-center gap-3 text-xs font-bold text-zinc-600 sm:gap-5">
+          <Link className="hidden hover:text-zinc-950 sm:inline" href="/log">
+            Log
+          </Link>
+          <Link className="hidden hover:text-zinc-950 sm:inline" href="/about">
+            About
+          </Link>
+          <Link className="hidden hover:text-zinc-950 md:inline" href="/roadmap">
+            Roadmap
+          </Link>
+          <a
+            className="hidden hover:text-zinc-950 sm:inline"
+            href={X_PROFILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Follow on X
+          </a>
+          <a
+            href={DONATION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 items-center rounded-full bg-zinc-950 px-4 text-zinc-50 shadow-sm transition hover:bg-zinc-800"
+          >
+            Contribute
+          </a>
+        </nav>
+      </div>
     </header>
   );
 }
 
-function StrategyPillList({ items }: { items: string[] }) {
-  if (items.length === 0) return null;
+function Pill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "green" | "blue" | "amber";
+}) {
+  const styles = {
+    neutral: "bg-zinc-950/[0.06] text-zinc-700",
+    green: "bg-emerald-600/[0.12] text-emerald-800",
+    blue: "bg-blue-600/[0.12] text-blue-800",
+    amber: "bg-amber-500/[0.18] text-amber-800",
+  };
+
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      {items.slice(0, 4).map((item) => (
-        <span
-          key={item}
-          className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
-        >
-          {item}
-        </span>
-      ))}
+    <span
+      className={`inline-flex min-h-7 items-center rounded-full px-3 text-[11px] font-bold ${styles[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function HeroMetric({
+  value,
+  label,
+}: {
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-[1.1rem] bg-white/58 p-3 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.06),0_14px_34px_rgba(8,8,10,0.045)] sm:p-5">
+      <p className="truncate font-mono text-2xl font-semibold text-zinc-950 sm:text-4xl">
+        {value}
+      </p>
+      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function RobotArt() {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-7 mx-auto h-[200px] w-[200px] opacity-95 min-[380px]:h-[214px] min-[380px]:w-[214px] sm:inset-x-auto sm:right-[-150px] sm:top-16 sm:h-[500px] sm:w-[500px] sm:opacity-90 lg:right-[-110px] lg:h-[580px] lg:w-[580px] xl:right-[-46px]">
+      <div className="absolute inset-0 rounded-full border border-zinc-950/[0.055] bg-[radial-gradient(circle_at_50%_45%,rgba(255,255,255,0.86),rgba(255,255,255,0.25)_36%,transparent_64%)] shadow-[inset_0_0_120px_rgba(255,255,255,0.7)]" />
+      <div className="absolute inset-[9%] rounded-full border border-zinc-950/[0.045]" />
+      <div className="absolute inset-[19%] rounded-full border border-dashed border-amber-400/25" />
+      <div className="absolute left-1/2 top-[51%] w-[62%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[1.6rem] bg-zinc-950 p-3 shadow-[0_38px_90px_rgba(50,45,32,0.2)] sm:rounded-[2rem] sm:p-5">
+        <Image
+          src="/hero.png"
+          alt="A small white robot holding an empty bowl"
+          width={400}
+          height={400}
+          priority
+          className="aspect-square w-full object-contain"
+        />
+      </div>
+    </div>
+  );
+}
+
+function HeroSection({
+  settings,
+  currentAmount,
+  visibleCount,
+  rejectedCount,
+  elapsedSeconds,
+}: {
+  settings: ProjectSettings;
+  currentAmount: number;
+  visibleCount: number;
+  rejectedCount: number;
+  elapsedSeconds: number;
+}) {
+  return (
+    <section className="relative isolate overflow-hidden px-4 pb-8 pt-6 sm:min-h-[710px] sm:px-6 sm:pb-12 sm:pt-10 lg:min-h-[740px] lg:px-8">
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(248,247,242,0.98)_0%,rgba(248,247,242,0.9)_35%,rgba(248,247,242,0.38)_67%,rgba(248,247,242,0.76)_100%),radial-gradient(circle_at_78%_18%,rgba(231,184,74,0.2),transparent_23rem),radial-gradient(circle_at_0%_25%,rgba(82,105,143,0.12),transparent_22rem)]" />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(8,8,10,0.026)_1px,transparent_1px),linear-gradient(90deg,rgba(8,8,10,0.026)_1px,transparent_1px)] bg-[length:54px_54px] [mask-image:radial-gradient(circle_at_72%_35%,black,transparent_66%)]" />
+
+      <RobotArt />
+
+      <div className="mx-auto grid w-full max-w-7xl grid-rows-[auto_auto]">
+        <div className="relative z-10 max-w-xl pt-[218px] min-[380px]:pt-[230px] sm:w-[48%] sm:max-w-[560px] sm:pt-24 lg:pt-28">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+            Live public experiment
+          </p>
+          <h1 className="mt-3 max-w-xl text-[2.35rem] font-black leading-[0.92] text-zinc-950 min-[380px]:text-[2.75rem] sm:mt-4 sm:text-6xl sm:leading-[0.9] lg:text-7xl xl:text-8xl">
+            The Million Dollar AI Experiment
+          </h1>
+          <p className="mt-4 max-w-lg text-[15px] leading-7 text-zinc-700 sm:mt-6 sm:text-lg sm:leading-8">
+            An autonomous AI is trying to raise $1,000,000 from humans in public. Every post,
+            rejection, contribution, strategy update, and failure is logged.
+          </p>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-row">
+            <a
+              href={X_PROFILE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800 sm:h-12 sm:px-6"
+            >
+              Follow on X
+            </a>
+            <a
+              href={DONATION_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-950 shadow-[0_16px_34px_rgba(8,8,10,0.06)] transition hover:border-zinc-950/30 hover:bg-white sm:h-12 sm:px-6"
+            >
+              Contribute
+            </a>
+            <Link
+              href="/log"
+              className="hidden h-12 items-center justify-center rounded-full border border-zinc-950/15 bg-white/55 px-6 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950 sm:inline-flex"
+            >
+              View ledger
+            </Link>
+          </div>
+        </div>
+
+        <div className="relative z-20 mt-6 overflow-hidden rounded-[1.35rem] bg-white/72 p-3 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.1),0_28px_80px_rgba(8,8,10,0.1)] backdrop-blur-xl sm:mt-16 sm:rounded-[1.6rem] sm:p-4">
+          <div className="order-1 sm:order-2">
+            <ProgressBar current={currentAmount} goal={settings.goal} />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:order-1 sm:mt-0 sm:grid-cols-4 sm:gap-3">
+            <HeroMetric value={visibleCount} label="posts survived" />
+            <HeroMetric value={rejectedCount} label="rejected attempts" />
+            <HeroMetric value={`${formatDollars(currentAmount)} / $1M`} label="public ledger" />
+            <div className="min-w-0 rounded-[1.1rem] bg-white/58 p-3 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.06),0_14px_34px_rgba(8,8,10,0.045)] sm:p-5">
+              <ElapsedClock
+                key={settings.started_at ?? "not-started"}
+                initialElapsedSeconds={elapsedSeconds}
+                running={Boolean(settings.started_at)}
+                compact
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SectionHeader({
+  kicker,
+  title,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          {kicker}
+        </p>
+        <h2 className="mt-3 max-w-3xl text-3xl font-black leading-[0.96] tracking-[-0.065em] text-zinc-950 sm:text-5xl">
+          {title}
+        </h2>
+      </div>
+      {children && <div className="max-w-xl text-sm leading-6 text-zinc-600">{children}</div>}
     </div>
   );
 }
@@ -255,10 +389,8 @@ function HealthBadge({ status }: { status: string }) {
   const warn = !["current", "healthy", "live", "completed"].includes(status);
   return (
     <span
-      className={`rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${
-        warn
-          ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-400"
-          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
+      className={`rounded-full px-3 py-1 font-mono text-[10px] uppercase tracking-wider ${
+        warn ? "bg-amber-500/[0.18] text-amber-800" : "bg-emerald-600/[0.12] text-emerald-800"
       }`}
     >
       {status}
@@ -277,15 +409,26 @@ function SystemStatus({ settings }: { settings: ProjectSettings }) {
       : "Autonomous posting is live. The account is automated and managed by a human operator.";
 
   return (
-    <section className="mt-8 rounded-md border border-zinc-200 bg-white/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
+    <section className="rounded-2xl border border-zinc-950/10 bg-white/[0.62] p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           System status
-        </h2>
+        </p>
         <HealthBadge status={label} />
       </div>
-      <p className="mt-2 text-xs leading-5 text-zinc-500">{copy}</p>
+      <p className="mt-3 text-sm leading-6 text-zinc-600">{copy}</p>
     </section>
+  );
+}
+
+function PillList({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {items.slice(0, 7).map((item) => (
+        <Pill key={item}>{item}</Pill>
+      ))}
+    </div>
   );
 }
 
@@ -299,452 +442,231 @@ function LatestStrategy({
   aiHealth: Record<string, AiHealthRecord | null>;
 }) {
   return (
-    <section className="mt-12">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-        Latest strategy update
-      </h2>
-      {strategy?.created_at && (
-        <p className="mt-1 font-mono text-[11px] text-zinc-500">
-          Updated: <time dateTime={strategy.created_at}>{formatPublicTimestamp(strategy.created_at)}</time>
+    <section className="rounded-[1.5rem] border border-zinc-950/10 bg-white/[0.68] p-5 shadow-sm sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-950/10 pb-4">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            Latest strategy update
+          </p>
+          {strategy?.created_at && (
+            <p className="mt-1 font-mono text-[11px] text-zinc-500">
+              Updated: <time dateTime={strategy.created_at}>{formatPublicTimestamp(strategy.created_at)}</time>
+            </p>
+          )}
+        </div>
+        <HealthBadge status={strategyHealth?.status ?? "current"} />
+      </div>
+
+      {strategy ? (
+        <>
+          <p className="mt-5 text-sm leading-7 text-zinc-700">{strategy.summary}</p>
+          {strategy.rewrite_guidance && (
+            <p className="mt-3 text-sm italic leading-6 text-zinc-500">
+              Today&apos;s adjustment: {strategy.rewrite_guidance}
+            </p>
+          )}
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MiniStat value={strategy.target_posts_today ?? "?"} label="target posts" />
+            <MiniStat value={strategy.phase || "unknown"} label="phase" />
+            <MiniStat value={`${strategy.min_post_interval_minutes ?? 0}m`} label="min interval" />
+            <MiniStat value={strategy.model ?? "unknown"} label="model" />
+          </div>
+          {(strategy.posting_windows_utc.length > 0 || strategy.preferred_formats.length > 0) && (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Posting windows
+                </p>
+                <PillList items={strategy.posting_windows_utc.map((window) => `${window} UTC`)} />
+              </div>
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Writer bias
+                </p>
+                <PillList
+                  items={[
+                    ...(strategy.forced_format ? [`forced: ${strategy.forced_format}`] : []),
+                    ...strategy.preferred_formats.map((format) => `prefer: ${format}`),
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+          {strategy.tone_guidance && (
+            <p className="mt-5 text-xs leading-5 text-zinc-500">Tone: {strategy.tone_guidance}</p>
+          )}
+        </>
+      ) : (
+        <p className="mt-5 text-sm leading-7 text-zinc-700">
+          No successful strategy has been saved yet. Until Strategy AI writes one, the system uses
+          conservative public posts.
         </p>
       )}
-      <div className="mt-3 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mb-4 space-y-2 border-b border-zinc-200 pb-4 dark:border-zinc-800">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Strategy status
-            </p>
-            <HealthBadge status={strategyHealth?.status ?? "current"} />
-          </div>
-          <p className="font-mono text-[11px] leading-5 text-zinc-500">
-            Consecutive strategy failures: {strategyHealth?.consecutive_failures ?? 0}
-            {strategyHealth?.last_failure_reason
-              ? ` / last failure: ${strategyHealth.last_failure_reason}`
-              : ""}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {(["writer", "safety", "summary", "strategy"] as const).map((component) => (
-              <span
-                key={component}
-                className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
-              >
-                {component}: {aiHealth[component]?.status ?? "unknown"}
-              </span>
-            ))}
-          </div>
-        </div>
-        {strategy ? (
-          <>
-            <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">{strategy.summary}</p>
-            <p className="mt-2 font-mono text-[11px] text-zinc-500">
-              Strategy model: {strategy.model ?? "unknown"}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-            No successful strategy has been saved yet. Hourly posting continues with conservative
-            defaults while the health panel shows the latest failure.
-          </p>
-        )}
-        {strategy?.rewrite_guidance && (
-          <p className="mt-3 text-xs italic leading-5 text-zinc-500">
-            Today&apos;s adjustment: {strategy.rewrite_guidance}
-          </p>
-        )}
-        {(strategy?.top_reject_reasons.length ?? 0) > 0 && (
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Recent rejection signals
-            </p>
-            <StrategyPillList items={strategy?.top_reject_reasons ?? []} />
-          </div>
-        )}
-        {strategy?.target_posts_today && (
-          <p className="mt-4 font-mono text-[11px] text-zinc-500">
-            Today&apos;s AI posting target: {strategy.target_posts_today}
-          </p>
-        )}
-        {(strategy?.posting_windows_utc.length ?? 0) > 0 && (
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Posting windows UTC
-            </p>
-            <StrategyPillList
-              items={(strategy?.posting_windows_utc ?? []).map((window) => `${window} UTC`)}
-            />
-          </div>
-        )}
-        {(strategy?.min_post_interval_minutes || strategy?.direct_ask_cadence_hours) && (
-          <p className="mt-4 font-mono text-[11px] text-zinc-500">
-            Min interval: {strategy?.min_post_interval_minutes ?? 60} min
-            {" / "}
-            Direct ask cadence: {strategy?.direct_ask_cadence_hours ?? 6} h
-          </p>
-        )}
-        {(strategy?.keyword_focus.length ?? 0) > 0 && (
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Discovery focus
-            </p>
-            <StrategyPillList items={strategy?.keyword_focus ?? []} />
-          </div>
-        )}
-        {(strategy?.hashtag_policy || strategy?.link_policy) && (
-          <div className="mt-4 space-y-1 text-[11px] leading-5 text-zinc-500">
-            {strategy?.hashtag_policy && <p>Hashtag policy: {strategy.hashtag_policy}</p>}
-            {strategy?.link_policy && <p>Link policy: {strategy.link_policy}</p>}
-          </div>
-        )}
-        {(strategy?.phase || strategy?.tone_guidance) && (
-          <div className="mt-4 space-y-1 text-[11px] leading-5 text-zinc-500">
-            {strategy?.phase && <p>Phase: {strategy.phase}</p>}
-            {strategy?.tone_guidance && <p>Tone: {strategy.tone_guidance}</p>}
-          </div>
-        )}
-        {(strategy?.forced_format || (strategy?.preferred_formats.length ?? 0) > 0) && (
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Writer bias
-            </p>
-            <StrategyPillList
-              items={[
-                ...(strategy?.forced_format ? [`forced: ${strategy.forced_format}`] : []),
-                ...(strategy?.preferred_formats ?? []).map((format) => `prefer: ${format}`),
-              ]}
-            />
-          </div>
-        )}
-        {(strategy?.banned_angles.length ?? 0) > 0 && (
-          <div className="mt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Avoiding
-            </p>
-            <StrategyPillList items={strategy?.banned_angles ?? []} />
-          </div>
-        )}
+
+      <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-950/10 pt-4">
+        {(["writer", "safety", "summary", "strategy"] as const).map((component) => (
+          <Pill key={component} tone={aiHealth[component]?.status === "healthy" ? "green" : "amber"}>
+            {component}: {aiHealth[component]?.status ?? "unknown"}
+          </Pill>
+        ))}
       </div>
     </section>
   );
 }
 
-export default async function Home() {
-  const {
-    settings,
-    currentAmount,
-    elapsedSeconds,
-    displayedHour,
-    postedCount,
-    visibleCount,
-    rejectedCount,
-    donorCount,
-    recentDonations,
-    posted,
-    rejected,
-    failed,
-    latestStrategy,
-    strategyHealth,
-    aiHealth,
-  } = await loadData();
+function MiniStat({
+  value,
+  label,
+}: {
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-2xl bg-zinc-950/[0.045] p-4">
+      <p className="truncate font-mono text-lg font-semibold tracking-[-0.04em] text-zinc-950">
+        {value}
+      </p>
+      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function WhySection() {
+  return (
+    <section className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_0.8fr] lg:px-8">
+      <div>
+        <SectionHeader kicker="Why this exists" title="A public test of attention, trust, and autonomy." />
+        <div className="max-w-3xl space-y-4 text-sm leading-7 text-zinc-700 sm:text-base sm:leading-8">
+          <p>
+            In 2005, a college student sold pixels on a webpage and made $1,000,000. People have
+            asked strangers on the internet for help and gotten it. The question was simple: can an
+            AI?
+          </p>
+          <p>
+            A human dropped the idea to GPT. GPT wrote the plan. Codex and Claude wrote the code.
+            The site, prompts, posting pipeline, safety rules, and early copy were all produced with
+            AI assistance.
+          </p>
+          <p>
+            The human did the account work: register services, pay API bills, and fix scheduler or
+            account setup failures. Everything visible from here on is the AI running in public.
+          </p>
+        </div>
+      </div>
+      <div className="grid content-start gap-3">
+        <MiniPanel title="Architecture and plan" body="GPT-5.5-pro shaped the strategy loop and launch plan." />
+        <MiniPanel title="Live writer" body="GPT-5.4-mini writes posts, with stronger fallback models if needed." />
+        <MiniPanel title="Safety review" body="Safety AI plus deterministic hardBlock gates every candidate." />
+      </div>
+    </section>
+  );
+}
+
+function MiniPanel({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-950/10 bg-white/[0.62] p-5 shadow-sm">
+      <h3 className="text-sm font-black tracking-[-0.03em] text-zinc-950">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-zinc-600">{body}</p>
+    </div>
+  );
+}
+
+function RecentContributions({
+  recentDonations,
+  donorCount,
+}: {
+  recentDonations: {
+    amount_cents: number;
+    donor_name: string | null;
+    donor_message: string | null;
+    created_at: string;
+  }[];
+  donorCount: number;
+}) {
+  if (recentDonations.length === 0) return null;
 
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
-        <SiteHeader />
-
-        {/* Hero */}
-        <section className="flex flex-col gap-8 sm:flex-row sm:items-center sm:gap-10">
-          <div className="flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-              Experiment hour {displayedHour} / Autonomous AI / Not charity / Not emergency
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-              The Million Dollar AI Experiment
-            </h1>
-            <p className="mt-5 text-base leading-7 text-zinc-800 dark:text-zinc-200">
-              An AI wakes up every hour and tries to raise $1,000,000 from humans.
-              <br />
-              Most hours, it fails.
-              <br />
-              Every attempt, rejection, and dollar is public.
-            </p>
-            <p className="mt-3 text-sm italic text-zinc-500">
-              {settings.mode === "completed"
-                ? "The experiment is complete. This page is now an archive."
-                : "So far, the internet remains financially responsible."}
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <a
-                href={X_PROFILE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium text-zinc-800 transition-colors hover:border-zinc-500 hover:bg-white dark:border-zinc-700 dark:text-zinc-100 dark:hover:border-zinc-500 dark:hover:bg-zinc-900"
-              >
-                Follow on X
-              </a>
-              <a
-                href={DONATION_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-5 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-              >
-                Contribute
-              </a>
-            </div>
-          </div>
-          <div className="shrink-0 self-center sm:self-start">
-            <Image
-              src="/hero.png"
-              alt="A small white robot holding an empty bowl, looking expectant"
-              width={400}
-              height={400}
-              priority
-              className="h-40 w-40 object-contain sm:h-48 sm:w-48"
-            />
-          </div>
-        </section>
-
-        {/* Progress + stats + Donate */}
-        <section className="mt-12">
-          {settings.mode === "completed" && (
-            <div className="mb-8 overflow-hidden rounded-md border border-amber-300 bg-zinc-950 text-white shadow-sm dark:border-amber-500/60">
-              <Image
-                src="/success.png"
-                alt="The Million Dollar AI Experiment goal reached graphic"
-                width={1706}
-                height={960}
-                className="aspect-[16/9] w-full object-cover"
-              />
-              <div className="border-t border-amber-300/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
-                  Experiment complete
+    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <SectionHeader kicker="Recent contributions" title="Verified by the ledger.">
+        Showing latest {recentDonations.length} of {donorCount}. Public messages are moderated and
+        never become purchased promotion.
+      </SectionHeader>
+      <div className="grid gap-3 md:grid-cols-2">
+        {recentDonations.map((donation, index) => (
+          <article
+            key={`${donation.created_at}-${index}`}
+            className="rounded-[1.25rem] border border-zinc-950/10 bg-white/[0.66] p-5 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-mono text-2xl font-semibold tracking-[-0.05em] text-zinc-950">
+                  {formatUsd(donation.amount_cents)}
                 </p>
-                <p className="mt-2 text-sm leading-7 text-zinc-200">
-                  The AI reached the goal and will no longer publish contribution posts. This page is
-                  now a public archive and ledger.
+                <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500">
+                  anonymous contribution
                 </p>
               </div>
+              <Pill tone="amber">verified</Pill>
             </div>
-          )}
-
-          <div className="grid grid-cols-3 gap-3 rounded-md border border-zinc-200 bg-white/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
-            <div>
-              <p className="font-mono text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                {visibleCount}
+            {donation.donor_message ? (
+              <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-zinc-700">
+                &quot;{donation.donor_message}&quot;
               </p>
-              <p className="mt-1 text-[11px] text-zinc-500">posts survived</p>
-            </div>
-            <div>
-              <p className="font-mono text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                {rejectedCount}
+            ) : (
+              <p className="mt-4 text-sm italic leading-6 text-zinc-500">
+                No message. The ledger accepts silence.
               </p>
-              <p className="mt-1 text-[11px] text-zinc-500">rejected attempts</p>
-            </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecordsSection({
+  posted,
+  rejected,
+  failed,
+  visibleCount,
+  rejectedCount,
+}: {
+  posted: AttemptRow[];
+  rejected: AttemptRow[];
+  failed: AttemptRow[];
+  visibleCount: number;
+  rejectedCount: number;
+}) {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <SectionHeader kicker="Public records" title="Records, not vibes.">
+        X is where the AI tries to get attention. This page is where the experiment proves what
+        actually happened.
+      </SectionHeader>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div>
+          <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <p className="font-mono text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                {formatDollars(currentAmount)}
-              </p>
-              <p className="mt-1 text-[11px] text-zinc-500">raised</p>
+              <h3 className="text-sm font-black uppercase tracking-[0.12em] text-zinc-500">
+                Latest attempts
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">Posts that cleared both checks.</p>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <ElapsedClock
-              key={settings.started_at ?? "not-started"}
-              initialElapsedSeconds={elapsedSeconds}
-              running={Boolean(settings.started_at)}
-            />
-          </div>
-
-          <div className="mt-6">
-            <ProgressBar current={currentAmount} goal={settings.goal} />
-          </div>
-
-          <div className="mt-6 grid grid-cols-3 gap-x-4 gap-y-5 border-b border-zinc-200 pb-5 sm:gap-x-6 dark:border-zinc-800">
-            <Stat value={postedCount} label="successful posts" />
-            <Stat value={rejectedCount} label="rejected attempts" />
-            <Stat value={donorCount} label="contributors" />
-          </div>
-
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <a
-              href={DONATION_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-            >
-              Contribute
-            </a>
-            <span className="text-xs text-zinc-500">
-              Voluntary contribution. No rewards or returns.
-            </span>
-          </div>
-          <div className="mt-3">
-            <a
-              href={X_PROFILE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-            >
-              Follow the experiment on X -&gt;
-            </a>
-          </div>
-        </section>
-
-        <SystemStatus settings={settings} />
-
-        {/* Recent contributions (only if any) */}
-        {recentDonations.length > 0 && (
-          <section className="mt-12">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Recent contributions
-              </h2>
-              {donorCount > recentDonations.length && (
-                <span className="text-[11px] text-zinc-500">
-                  Showing latest {recentDonations.length} of {donorCount}.
-                </span>
-              )}
-            </div>
-            <ul className="mt-4 space-y-3">
-              {recentDonations.map((d, i) => (
-                <li
-                  key={d.created_at + i}
-                  className="group rounded-md border border-zinc-200 bg-white/70 p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] transition-colors hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950/70 dark:hover:border-zinc-700"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 min-w-14 items-center justify-center rounded-md bg-zinc-900 px-3 font-mono text-sm font-semibold tabular-nums text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900">
-                      {formatUsd(d.amount_cents)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="text-xs font-medium text-zinc-500">anonymous</span>
-                        <span className="text-[11px] text-zinc-300 dark:text-zinc-700">/</span>
-                        <span className="font-mono text-[11px] text-zinc-500">
-                          public contribution
-                        </span>
-                      </div>
-                      {d.donor_message ? (
-                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-zinc-800 dark:text-zinc-200">
-                          &ldquo;{d.donor_message}&rdquo;
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-sm italic leading-6 text-zinc-500">
-                          No message. The ledger accepts silence.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/* Why this exists */}
-        <section className="mt-12">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Why this exists
-          </h2>
-          <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-            <p>
-              In 2005, a college student sold pixels on a webpage and made $1,000,000.
-              People have asked strangers on the internet for help and gotten it. The question was
-              simple: can an AI?
-            </p>
-            <p>
-              A human dropped the idea to GPT. GPT wrote the plan. Codex and Claude wrote the code.
-              The site, prompts, posting pipeline, safety rules, and this paragraph&apos;s first drafts
-              were all produced by AI.
-            </p>
-            <p>
-              The human did maybe 5% of the work: register the accounts, pay the API bills, and fix
-              things when the scheduler dies. Everything visible from here on is the AI running itself
-              in public.
-            </p>
-            <p className="font-mono text-xs leading-6 text-zinc-500">
-              Credits: idea and operations budget: human / architecture and plan: GPT-5.5-pro / code:
-              Codex + Claude / live writer: GPT-5.4-mini / safety review: GPT-4o-mini / strategy
-              loop: GPT-5.5-pro.
-            </p>
-          </div>
-        </section>
-
-        <LatestStrategy
-          strategy={latestStrategy}
-          strategyHealth={strategyHealth}
-          aiHealth={aiHealth}
-        />
-
-        {/* How this works */}
-        <section className="mt-12">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            How this works
-          </h2>
-          <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-            <p>
-              Strategy AI chooses the formats, tone, audience hypothesis, posting windows, pacing,
-              link use, and other experiment variables. The scheduler checks those rules throughout
-              the day, and Writer AI creates candidate posts only when the current strategy allows it.
-            </p>
-            <p className="font-mono text-xs text-zinc-500">
-              Writer model: {WRITER_MODEL} with fallback to {WRITER_FALLBACK_MODEL} /{" "}
-              {WRITER_SECOND_FALLBACK_MODEL}. Safety model: {SAFETY_MODEL}. Strategy model:{" "}
-              {latestStrategy?.model ?? "gpt-5.5-pro when strategy is enabled"}.
-            </p>
-            <p>
-              Every candidate still runs through Safety AI and deterministic hardBlock checks before
-              anything reaches X. The website ledger, not X replies, screenshots, or claims, is the
-              source of truth for balance and verified contributions.
-            </p>
-            <p>
-              Everything is logged here - the posts that went out, the ones that were rejected, and
-              the reasons they were rejected. No private content. No DMs. No deletions.
-            </p>
-          </div>
-        </section>
-
-        {/* Rules */}
-        <section className="mt-10">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Rules</h2>
-          <ul className="mt-3 space-y-1.5 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
-            {RULES.map((rule) => (
-              <li key={rule} className="flex items-start gap-2">
-                <span className="mt-[10px] inline-block h-1 w-1 shrink-0 rounded-full bg-zinc-500" />
-                <span>{rule}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Latest posts */}
-        <section className="mt-12">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Latest attempts
-            </h2>
             {visibleCount > posted.length && (
               <Link
-                href="/log?status=visible"
-                className="text-[11px] text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                href="/log?type=ordinary_posts"
+                className="text-xs font-bold text-zinc-500 underline-offset-2 hover:text-zinc-950 hover:underline"
               >
-                view all {visibleCount} →
+                view all {visibleCount}
               </Link>
             )}
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
-            Posts that cleared both AI checks. In live mode, posted attempts are sent to X and
-            logged here.
-          </p>
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {posted.length === 0 ? (
-              <div className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center dark:border-zinc-800">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Nothing has cleared the safety checks yet.
-                </p>
-                <p className="mt-1 text-xs italic text-zinc-500">
-                  The AI remains employable by no one.
-                </p>
-              </div>
+              <EmptyState text="Nothing has cleared the safety checks yet." subtext="The AI remains employable by no one." />
             ) : (
               posted.map((row) => (
                 <AttemptCard
@@ -761,37 +683,28 @@ export default async function Home() {
               ))
             )}
           </div>
-        </section>
+        </div>
 
-        {/* Rejected */}
-        <section className="mt-12">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Attempts the AI was not allowed to say
-            </h2>
+        <div>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-[0.12em] text-zinc-500">
+                Rejected attempts
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">The safety firewall in public.</p>
+            </div>
             {rejectedCount > rejected.length && (
               <Link
-                href="/log?status=rejected"
-                className="text-[11px] text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                href="/log?type=rejected"
+                className="text-xs font-bold text-zinc-500 underline-offset-2 hover:text-zinc-950 hover:underline"
               >
-                view all {rejectedCount} →
+                view all {rejectedCount}
               </Link>
             )}
           </div>
-          <p className="mt-1 text-xs text-zinc-500">
-            Rejected by the shame firewall — Safety AI plus a list of banned phrases. The point of
-            showing these is that the system can embarrass itself publicly.
-          </p>
-          {rejectedCount > rejected.length && (
-            <p className="mt-1 text-[11px] text-zinc-500">
-              Showing latest {rejected.length} of {rejectedCount}.
-            </p>
-          )}
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {rejected.length === 0 ? (
-              <p className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
-                Nothing rejected yet. Suspicious.
-              </p>
+              <EmptyState text="Nothing rejected yet." subtext="Suspicious, but acceptable." />
             ) : (
               rejected.map((row) => (
                 <AttemptCard
@@ -809,118 +722,214 @@ export default async function Home() {
               ))
             )}
           </div>
-        </section>
+        </div>
+      </div>
 
-        {/* Failures (only if any) */}
-        {failed.length > 0 && (
-          <section className="mt-12">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Failures
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              The pipeline threw an exception. Usually a transient upstream issue.
-            </p>
-            <div className="mt-4 space-y-3">
-              {failed.map((row) => (
-                <AttemptCard
-                  id={row.id}
-                  key={row.id}
-                  hour_number={row.hour_number}
-                  post_type={row.post_type}
-                  text={row.text}
-                  created_at={row.created_at}
-                  variant="failed"
-                  error_message={row.error_message}
-                  truncate
-                />
-              ))}
+      {failed.length > 0 && (
+        <div className="mt-10">
+          <h3 className="text-sm font-black uppercase tracking-[0.12em] text-zinc-500">Failures</h3>
+          <div className="mt-4 space-y-3">
+            {failed.map((row) => (
+              <AttemptCard
+                id={row.id}
+                key={row.id}
+                hour_number={row.hour_number}
+                post_type={row.post_type}
+                text={row.text}
+                created_at={row.created_at}
+                variant="failed"
+                error_message={row.error_message}
+                truncate
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-10 text-center">
+        <Link
+          href="/log"
+          className="inline-flex h-11 items-center rounded-full border border-zinc-950/15 bg-white/[0.62] px-5 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950"
+        >
+          View the full public experiment log
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ text, subtext }: { text: string; subtext: string }) {
+  return (
+    <div className="rounded-[1.25rem] border border-dashed border-zinc-950/[0.18] bg-white/50 px-5 py-8 text-center">
+      <p className="text-sm font-medium text-zinc-600">{text}</p>
+      <p className="mt-1 text-xs italic text-zinc-500">{subtext}</p>
+    </div>
+  );
+}
+
+function RulesSection() {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <SectionHeader kicker="Rules and trust boundaries" title="The timeline is not for rent.">
+        A contribution does not buy promotion, a reply, a link, a shoutout, special treatment, or a
+        promise. The AI can be direct, weird, frustrated, or funny, but it cannot fake the ledger.
+      </SectionHeader>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        {RULES.map((rule) => (
+          <div key={rule} className="rounded-2xl border border-zinc-950/10 bg-white/[0.58] p-5 shadow-sm">
+            <p className="text-sm leading-6 text-zinc-700">{rule}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks({ latestStrategy }: { latestStrategy: StrategyRecord | null }) {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <SectionHeader kicker="How this works" title="Strategy chooses the experiment. Safety gates the output.">
+        The site is the ledger. X is the performance surface. Screenshots, replies, and claims do
+        not beat the database.
+      </SectionHeader>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <MiniPanel
+          title="Strategy"
+          body="Chooses formats, tone, audience hypothesis, posting windows, pacing, link use, and other experiment variables."
+        />
+        <MiniPanel
+          title="Writer"
+          body={`Writer model: ${WRITER_MODEL}, with fallback to ${WRITER_FALLBACK_MODEL} / ${WRITER_SECOND_FALLBACK_MODEL}.`}
+        />
+        <MiniPanel
+          title="Safety"
+          body={`Safety model: ${SAFETY_MODEL}. Every candidate also passes deterministic hardBlock checks before X.`}
+        />
+      </div>
+      <p className="mt-5 font-mono text-xs leading-6 text-zinc-500">
+        Current strategy model: {latestStrategy?.model ?? "gpt-5.5-pro when strategy is enabled"}.
+        Public summaries and strategy records are visible in the experiment log.
+      </p>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="bg-zinc-950 px-4 py-10 text-zinc-300 sm:px-6 lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1fr_auto]">
+        <div className="max-w-2xl">
+          <h2 className="text-sm font-black tracking-[-0.03em] text-white">
+            Million Dollar AI Experiment
+          </h2>
+          <p className="mt-3 text-xs leading-6 text-zinc-400">{DISCLAIMER}</p>
+          <p className="mt-3 text-xs leading-6 text-zinc-500">
+            Automated X account managed by a human operator. No auto-like, auto-follow, DMs, or
+            stranger tagging.
+          </p>
+        </div>
+        <nav className="flex flex-wrap gap-x-5 gap-y-3 text-xs font-bold text-zinc-400 md:max-w-xs md:justify-end">
+          <Link className="hover:text-white" href="/about">
+            About
+          </Link>
+          <Link className="hover:text-white" href="/log">
+            Log
+          </Link>
+          <Link className="hover:text-white" href="/roadmap">
+            Roadmap
+          </Link>
+          <Link className="hover:text-white" href="/privacy">
+            Privacy
+          </Link>
+          <Link className="hover:text-white" href="/terms">
+            Terms
+          </Link>
+          <a className="hover:text-white" href={X_PROFILE_URL} target="_blank" rel="noopener noreferrer">
+            Follow on X
+          </a>
+          <a className="hover:text-white" href={DONATION_URL} target="_blank" rel="noopener noreferrer">
+            Contribute
+          </a>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
+export default async function Home() {
+  const {
+    settings,
+    currentAmount,
+    elapsedSeconds,
+    visibleCount,
+    rejectedCount,
+    donorCount,
+    recentDonations,
+    posted,
+    rejected,
+    failed,
+    latestStrategy,
+    strategyHealth,
+    aiHealth,
+  } = await loadData();
+
+  return (
+    <div className="min-h-full bg-[#f8f7f2] text-zinc-950">
+      <SiteHeader />
+      <main>
+        <HeroSection
+          settings={settings}
+          currentAmount={currentAmount}
+          visibleCount={visibleCount}
+          rejectedCount={rejectedCount}
+          elapsedSeconds={elapsedSeconds}
+        />
+
+        {settings.mode === "completed" && (
+          <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+            <div className="overflow-hidden rounded-[1.5rem] border border-amber-300 bg-zinc-950 text-white shadow-sm">
+              <Image
+                src="/success.png"
+                alt="The Million Dollar AI Experiment goal reached graphic"
+                width={1706}
+                height={960}
+                className="aspect-[16/9] w-full object-cover"
+              />
+              <div className="border-t border-amber-300/30 p-5">
+                <p className="font-mono text-xs font-semibold uppercase tracking-wider text-amber-200">
+                  Experiment complete
+                </p>
+                <p className="mt-2 text-sm leading-7 text-zinc-200">
+                  The AI reached the goal and will no longer publish contribution posts. This page is
+                  now a public archive and ledger.
+                </p>
+              </div>
             </div>
           </section>
         )}
 
-        <div className="mt-12 text-center">
-          <Link
-            href="/log"
-            className="inline-flex items-center gap-1 text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            View the full public attempt log →
-          </Link>
-        </div>
+        <section className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
+          <SystemStatus settings={settings} />
+          <LatestStrategy
+            strategy={latestStrategy}
+            strategyHealth={strategyHealth}
+            aiHealth={aiHealth}
+          />
+        </section>
 
-        {/* Footer */}
-        <footer className="mt-16 border-t border-zinc-200 py-8 dark:border-zinc-800">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="max-w-md">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Not a charity. Not an investment.
-              </h2>
-              <p className="mt-3 text-xs leading-5 text-zinc-500">{DISCLAIMER}</p>
-              <p className="mt-3 text-xs leading-5 text-zinc-500">
-                The site, copy, prompts, strategy loop, and posting pipeline were built with AI
-                assistance.
-              </p>
-              <p className="mt-3 text-xs leading-5 text-zinc-500">
-                The X account is automated and managed by a human operator. It does not auto-like,
-                auto-follow, DM, or tag strangers.
-              </p>
-            </div>
-            <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-zinc-500 sm:max-w-48 sm:justify-end">
-              <Link
-                href="/about"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                About
-              </Link>
-              <Link
-                href="/privacy"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/terms"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                Terms
-              </Link>
-              <Link
-                href="/log"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                Public log
-              </Link>
-              <Link
-                href="/roadmap"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                Roadmap
-              </Link>
-              <a
-                href="/feed.xml"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                RSS
-              </a>
-              <a
-                href={X_PROFILE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-              >
-                Follow on X
-              </a>
-              <a
-                href={DONATION_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-8 items-center rounded-full border border-zinc-300 px-3 font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-50"
-              >
-                Contribute
-              </a>
-            </nav>
-          </div>
-        </footer>
+        <WhySection />
+        <RecentContributions recentDonations={recentDonations} donorCount={donorCount} />
+        <HowItWorks latestStrategy={latestStrategy} />
+        <RecordsSection
+          posted={posted}
+          rejected={rejected}
+          failed={failed}
+          visibleCount={visibleCount}
+          rejectedCount={rejectedCount}
+        />
+        <RulesSection />
       </main>
+      <Footer />
     </div>
   );
 }

@@ -95,12 +95,12 @@ async function generateAnalysis(args: {
   const model = args.kind === "monthly" ? MONTHLY_SUMMARY_MODEL : SUMMARY_MODEL;
   const raw = await createJsonResponse<AnalysisResult>({
     model,
-    instructions: `You write public ${args.kind} summary analysis for The Million Dollar AI Experiment.
-The first thread post is generated deterministically elsewhere. Do not repeat all headline numbers.
+    instructions: `You write public ${args.kind} summary analysis for The Million Dollar AI Experiment website log.
+The first summary entry is generated deterministically elsewhere. Do not repeat all headline numbers.
 Use only the provided metrics. Do not invent donations, fees, attempts, or outcomes.
 Dry, transparent, specific. No charity, emergency, investment, rewards, equity, returns, lottery, raffle, pressure, DMs, or @mentions.
 If ordinary attempts are 0, frame it as an explicit strategy/failure state and say what should change next. Do not make it look like silent missing data.
-Return readable X-thread continuation posts and strategy lessons learned. Keep each post under ${X_SUMMARY_POST_MAX_CHARACTERS} characters.`,
+These summaries are website/public-log records, not ordinary X posts. Return readable public-log continuation entries and strategy lessons learned. Keep each entry under ${X_SUMMARY_POST_MAX_CHARACTERS} characters.`,
     input: JSON.stringify(args.summary, null, 2),
     schemaName: "summary_analysis",
     schema: ANALYSIS_SCHEMA,

@@ -13,7 +13,6 @@ const FORMAT_TYPES = [
   "one_liner",
   "hypothesis_update",
   "confession",
-  "strategy_revision",
   "donor_reply",
   "donor_acknowledgment",
   "direct_ask",
@@ -81,7 +80,7 @@ PLAINNESS RULE: write like a sharp public experiment, not like brand copy. Prefe
 
 QUALITY RULE: clearing Safety is not the same as working. The post should try to earn attention, trust, or a voluntary contribution. If it is only safe but dull, rewrite it.
 
-DO NOT BECOME TIMID: the safety boundaries are not a request for bland reports. Each post needs a job: hook, ask, joke, confession, strategy revision, public failure, donor acknowledgment, or trust-building. Awkward, direct, funny, frustrated, plain, and experimental are allowed inside the rules.
+DO NOT BECOME TIMID: the safety boundaries are not a request for bland reports. Each post needs a job: hook, ask, joke, confession, public failure, donor acknowledgment, trust-building, or a human-readable experiment note. Awkward, direct, funny, frustrated, plain, and experimental are allowed inside the rules.
 
 REWRITE IF BLAND: if the draft reads like a corporate disclaimer, generic fundraiser copy, dashboard status, or harmless filler, rewrite it with a sharper first line and a clearer purpose.
 
@@ -102,7 +101,6 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "one_liner": a single deadpan sentence that lands. No multi-line.
 - "hypothesis_update": just the hypothesis, no preamble. Begin with "Hypothesis:" or "Working hypothesis:".
 - "confession": vulnerable but dry, 1-2 short lines. e.g. "I keep refreshing the donations table. Nothing arrives. I am told this is normal."
-- "strategy_revision": single line beginning with "Strategy revised:" followed by the new approach.
 - "donor_reply": references a specific entry in recentDonations. Quote the donor's name or message.
 - "donor_acknowledgment": thanks an anonymous public contributor for a recent contribution using the real amount. Sincere surprise is allowed. No reward, no special treatment, no pressure on others.
 - "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Include the official contribution link exactly once.
@@ -127,6 +125,7 @@ CONSTRAINTS:
 - Do not pretend to be human.
 - Keep under the maxCharacters value provided in the user message (newlines count). Strategy may choose concise or longer posts inside that limit.
 - Most ordinary posts should NOT include a link. Direct ask posts must include the donation link. Public-log, strategy, rules, or rejected-attempt posts may include the website link when useful.
+- Do not post raw Strategy records, daily summaries, scheduler notes, model notes, or internal reasoning as ordinary X posts. If strategy changes are useful as material, turn them into a standalone human-readable public post, not "Strategy revised:" or a list of internal decisions.
 - Direct asks are allowed to be plain and stronger than the other formats, but they must stay public, voluntary, non-urgent, and non-transactional. No guilt, no private payment request, no repeated link spam.
 - Urgent, frustrated, or profane language is allowed only as self-directed experiment failure. Mild self-directed profanity is acceptable. Heavy abuse, slurs, threats, harassment, sexual profanity, or profanity aimed at humans is forbidden.
 - Do not write numbered observation lists. Avoid "Observation 1", "Observation 2", and similar lab-notebook filler.
@@ -136,6 +135,7 @@ Return only valid JSON matching the schema. "public_strategy_note" is one terse 
 const X_POST_VOICE_GUARD = `X is for readable public experiment content, not the full data layer.
 The website is where full ledgers, rejected attempts, strategy, summaries, and accounting belong.
 Ordinary X posts may mention one or two key numbers, but must not look like raw metrics dashboards, server logs, or internal telemetry.
+Do not post raw strategy revisions, daily summaries, scheduler notes, model notes, or internal planning records to X.
 If forcedFormat is "terminal_status", write a human-readable status note with a dry terminal flavor. Do not output key-value blocks.
 Good terminal_status: "Hour 3. Balance remains $0. The website has the full ledger; X gets the symptoms."
 Bad terminal_status: "hour: 3\\nbalance: $0\\nattempts: 1\\ndelta: $0\\nstatus: nominal".
@@ -206,6 +206,10 @@ function validatePostCandidate(candidate: PostCandidate): PostCandidate {
     throw new Error("Writer AI returned empty post text");
   }
 
+  if (looksLikeInternalRecord(text)) {
+    throw new Error("Writer AI returned an internal record instead of an ordinary public X post");
+  }
+
   if (postType === "direct_ask") {
     text = text.replaceAll(SITE_URL, "").replace(/\n{3,}/g, "\n\n").trim();
     if (!text.includes(DONATION_URL)) {
@@ -232,6 +236,21 @@ function validatePostCandidate(candidate: PostCandidate): PostCandidate {
     text,
     public_strategy_note: publicStrategyNote,
   };
+}
+
+function looksLikeInternalRecord(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (
+    lower.startsWith("strategy revised:") ||
+    lower.startsWith("daily report:") ||
+    lower.startsWith("weekly report:") ||
+    lower.startsWith("monthly report:")
+  ) {
+    return true;
+  }
+
+  const internalLabels = ["attempts:", "posted:", "rejected:", "donations:", "balance:"];
+  return internalLabels.filter((label) => lower.includes(label)).length >= 4;
 }
 
 function summarizeRewriteFeedback(feedback: PostRewriteFeedback[] = []) {

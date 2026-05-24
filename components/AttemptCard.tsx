@@ -1,8 +1,10 @@
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
+import { attemptShareUrl } from "@/lib/attemptShare";
 
 type Variant = "posted" | "logged_only" | "rejected" | "failed";
 
 type AttemptCardProps = {
+  id?: string;
   hour_number: number | null;
   post_type?: string | null;
   text: string;
@@ -41,6 +43,7 @@ const postTypeLabel: Record<string, string> = {
 };
 
 export function AttemptCard({
+  id,
   hour_number,
   post_type,
   text,
@@ -54,9 +57,16 @@ export function AttemptCard({
 }: AttemptCardProps) {
   const muted = variant === "rejected" || variant === "failed";
   const textClamp = truncate ? "line-clamp-3" : "";
+  const canShare = Boolean(id && variant !== "failed");
+  const shareHref = id
+    ? attemptShareUrl({ id, status: variant, postType: post_type, text })
+    : null;
 
   return (
-    <article className="min-w-0 overflow-hidden rounded-md border border-zinc-300 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none">
+    <article
+      id={id ? `attempt-${id}` : undefined}
+      className="scroll-mt-6 min-w-0 overflow-hidden rounded-md border border-zinc-300 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:shadow-none"
+    >
       <header className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 break-words [overflow-wrap:anywhere] flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-zinc-500">
           <span>{hour_number != null ? `Hour ${hour_number}` : "-"}</span>
@@ -122,6 +132,19 @@ export function AttemptCard({
 
       {public_strategy_note && !muted && (
         <p className="mt-3 text-xs italic text-zinc-500">{public_strategy_note}</p>
+      )}
+
+      {canShare && shareHref && (
+        <div className="mt-4">
+          <a
+            href={shareHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-8 items-center rounded-full border border-zinc-300 px-3 text-xs font-medium text-zinc-600 transition-colors hover:border-zinc-500 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-50"
+          >
+            Share on X
+          </a>
+        </div>
       )}
     </article>
   );

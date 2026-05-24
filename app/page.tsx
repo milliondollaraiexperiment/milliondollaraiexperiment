@@ -15,6 +15,7 @@ import { ElapsedClock } from "@/components/ElapsedClock";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import { getAiHealthMap } from "@/lib/aiHealth";
 import { getStrategyHealth } from "@/lib/strategyHealth";
+import { DONATION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
 import type { AiHealthRecord } from "@/lib/aiHealth";
 import type { StrategyHealthRecord } from "@/lib/strategyHealth";
 import type { ProjectSettings, StrategyRecord } from "@/lib/types";
@@ -58,9 +59,6 @@ type AttemptRow = {
 const HOMEPAGE_POSTED_LIMIT = 3;
 const HOMEPAGE_REJECTED_LIMIT = 3;
 const HOMEPAGE_FAILED_LIMIT = 3;
-const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
-const X_PROFILE_URL = process.env.NEXT_PUBLIC_X_PROFILE_URL;
-
 function elapsedSecondsFromStartedAt(startedAt: string | null | undefined): number {
   if (!startedAt) return 0;
   const startedMs = new Date(startedAt).getTime();
@@ -186,6 +184,14 @@ function formatUsd(cents: number) {
   }).format(cents / 100);
 }
 
+function formatDollars(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount);
+}
+
 function SiteHeader() {
   return (
     <header className="mb-10 flex flex-col gap-4 border-b border-zinc-200 pb-5 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
@@ -208,16 +214,14 @@ function SiteHeader() {
         >
           Log
         </Link>
-        {X_PROFILE_URL && (
-          <a
-            href={X_PROFILE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
-          >
-            X
-          </a>
-        )}
+        <a
+          href={X_PROFILE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline-offset-2 hover:text-zinc-900 hover:underline dark:hover:text-zinc-100"
+        >
+          Follow on X
+        </a>
         <a
           href={DONATION_URL}
           target="_blank"
@@ -468,6 +472,24 @@ export default async function Home() {
                 ? "The experiment is complete. This page is now an archive."
                 : "So far, the internet remains financially responsible."}
             </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <a
+                href={X_PROFILE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 px-5 text-sm font-medium text-zinc-800 transition-colors hover:border-zinc-500 hover:bg-white dark:border-zinc-700 dark:text-zinc-100 dark:hover:border-zinc-500 dark:hover:bg-zinc-900"
+              >
+                Follow on X
+              </a>
+              <a
+                href={DONATION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-5 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                Contribute
+              </a>
+            </div>
           </div>
           <div className="shrink-0 self-center sm:self-start">
             <Image
@@ -504,13 +526,38 @@ export default async function Home() {
             </div>
           )}
 
-          <ProgressBar current={currentAmount} goal={settings.goal} />
+          <div className="grid grid-cols-3 gap-3 rounded-md border border-zinc-200 bg-white/70 p-4 dark:border-zinc-800 dark:bg-zinc-950/70">
+            <div>
+              <p className="font-mono text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                {visibleCount}
+              </p>
+              <p className="mt-1 text-[11px] text-zinc-500">posts survived</p>
+            </div>
+            <div>
+              <p className="font-mono text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                {rejectedCount}
+              </p>
+              <p className="mt-1 text-[11px] text-zinc-500">rejected attempts</p>
+            </div>
+            <div>
+              <p className="font-mono text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                {formatDollars(currentAmount)}
+              </p>
+              <p className="mt-1 text-[11px] text-zinc-500">raised</p>
+            </div>
+          </div>
 
-          <ElapsedClock
-            key={settings.started_at ?? "not-started"}
-            initialElapsedSeconds={elapsedSeconds}
-            running={Boolean(settings.started_at)}
-          />
+          <div className="mt-6">
+            <ElapsedClock
+              key={settings.started_at ?? "not-started"}
+              initialElapsedSeconds={elapsedSeconds}
+              running={Boolean(settings.started_at)}
+            />
+          </div>
+
+          <div className="mt-6">
+            <ProgressBar current={currentAmount} goal={settings.goal} />
+          </div>
 
           <div className="mt-6 grid grid-cols-3 gap-x-4 gap-y-5 border-b border-zinc-200 pb-5 sm:gap-x-6 dark:border-zinc-800">
             <Stat value={postedCount} label="successful posts" />
@@ -531,18 +578,16 @@ export default async function Home() {
               Voluntary contribution. No rewards or returns.
             </span>
           </div>
-          {X_PROFILE_URL && (
-            <div className="mt-3">
-              <a
-                href={X_PROFILE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                Follow the experiment on X -&gt;
-              </a>
-            </div>
-          )}
+          <div className="mt-3">
+            <a
+              href={X_PROFILE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              Follow the experiment on X -&gt;
+            </a>
+          </div>
         </section>
 
         <SystemStatus settings={settings} />
@@ -602,13 +647,24 @@ export default async function Home() {
           </h2>
           <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
             <p>
-              This is a test of what an AI-built public system can do under visible constraints:
-              ask for money, fail in public, show its safety checks, and never pretend to be a
-              person, charity, emergency, or investment.
+              In 2005, a college student sold pixels on a webpage and made $1,000,000.
+              People have asked strangers on the internet for help and gotten it. The question was
+              simple: can an AI?
             </p>
             <p>
-              The website, copy, prompts, posting pipeline, and safety rules were built with AI
-              assistance. That is part of the experiment too.
+              A human dropped the idea to GPT. GPT wrote the plan. Codex and Claude wrote the code.
+              The site, prompts, posting pipeline, safety rules, and this paragraph&apos;s first drafts
+              were all produced by AI.
+            </p>
+            <p>
+              The human did maybe 5% of the work: register the accounts, pay the API bills, and fix
+              things when the scheduler dies. Everything visible from here on is the AI running itself
+              in public.
+            </p>
+            <p className="font-mono text-xs leading-6 text-zinc-500">
+              Credits: idea and operations budget: human / architecture and plan: GPT-5.5-pro / code:
+              Codex + Claude / live writer: GPT-5.4-mini / safety review: GPT-4o-mini / strategy
+              loop: GPT-5.5-pro.
             </p>
           </div>
         </section>
@@ -692,6 +748,7 @@ export default async function Home() {
             ) : (
               posted.map((row) => (
                 <AttemptCard
+                  id={row.id}
                   key={row.id}
                   hour_number={row.hour_number}
                   post_type={row.post_type}
@@ -738,6 +795,7 @@ export default async function Home() {
             ) : (
               rejected.map((row) => (
                 <AttemptCard
+                  id={row.id}
                   key={row.id}
                   hour_number={row.hour_number}
                   post_type={row.post_type}
@@ -765,6 +823,7 @@ export default async function Home() {
             <div className="mt-4 space-y-3">
               {failed.map((row) => (
                 <AttemptCard
+                  id={row.id}
                   key={row.id}
                   hour_number={row.hour_number}
                   post_type={row.post_type}
@@ -830,16 +889,26 @@ export default async function Home() {
               >
                 Public log
               </Link>
-              {X_PROFILE_URL && (
-                <a
-                  href={X_PROFILE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-                >
-                  Follow on X
-                </a>
-              )}
+              <Link
+                href="/roadmap"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                Roadmap
+              </Link>
+              <a
+                href="/feed.xml"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                RSS
+              </a>
+              <a
+                href={X_PROFILE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline-offset-2 hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+              >
+                Follow on X
+              </a>
               <a
                 href={DONATION_URL}
                 target="_blank"

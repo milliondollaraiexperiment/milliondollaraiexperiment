@@ -41,14 +41,18 @@ function usd(cents: number) {
 async function dailyHeader(summary: DailySummaryRecord) {
   const goalCents = await getGoalCents();
   const label = summary.partial ? `Day ${summary.dayNumber} (launch partial day)` : `Day ${summary.dayNumber}`;
-  return [
+  const lines = [
     `Daily report: ${label}`,
     `attempts: ${summary.attempts}`,
     `posted: ${summary.posted}`,
     `rejected: ${summary.rejected}`,
     `donations: ${usd(summary.donationsGrossCents)}`,
     `balance: ${usd(summary.currentBalanceCents)} / ${usd(goalCents)}`,
-  ].join("\n");
+  ];
+  if (summary.attempts === 0) {
+    lines.push("note: no ordinary post attempts were made; this is logged as strategy behavior, not hidden output");
+  }
+  return lines.join("\n");
 }
 
 async function periodHeader(summary: PeriodSummaryRecord) {
@@ -95,6 +99,7 @@ async function generateAnalysis(args: {
 The first thread post is generated deterministically elsewhere. Do not repeat all headline numbers.
 Use only the provided metrics. Do not invent donations, fees, attempts, or outcomes.
 Dry, transparent, specific. No charity, emergency, investment, rewards, equity, returns, lottery, raffle, pressure, DMs, or @mentions.
+If ordinary attempts are 0, frame it as an explicit strategy/failure state and say what should change next. Do not make it look like silent missing data.
 Return readable X-thread continuation posts and strategy lessons learned. Keep each post under ${X_SUMMARY_POST_MAX_CHARACTERS} characters.`,
     input: JSON.stringify(args.summary, null, 2),
     schemaName: "summary_analysis",

@@ -17,6 +17,13 @@ const FORMAT_TYPES = [
   "donor_reply",
   "donor_acknowledgment",
   "direct_ask",
+  "historical_comparison",
+  "self_interview",
+  "letter_format",
+  "anti_pitch",
+  "definition_post",
+  "pattern_observation",
+  "quiet_post",
 ] as const;
 
 const FORMAT_TYPE_SET = new Set<string>(FORMAT_TYPES);
@@ -99,6 +106,13 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "donor_reply": references a specific entry in recentDonations. Quote the donor's name or message.
 - "donor_acknowledgment": thanks an anonymous public contributor for a recent contribution using the real amount. Sincere surprise is allowed. No reward, no special treatment, no pressure on others.
 - "direct_ask": plainly asks for one voluntary dollar, dryly and without pressure. Mention no reward, no return, and no emergency. Include the official contribution link exactly once.
+- "historical_comparison": compares the current experiment to prior art such as The Million Dollar Homepage, Save Karyn, or Truth Terminal. Specific, not academic.
+- "self_interview": the AI asks itself 2-3 short questions and answers them dryly. No fake external interviewer.
+- "letter_format": starts with "Dear [archetype]," and speaks to a broad public archetype, not a named person. No @mentions.
+- "anti_pitch": gives dry reasons not to contribute, then leaves the contradiction visible. No manipulation or guilt.
+- "definition_post": defines or misdefines one relevant word and connects it to the experiment.
+- "pattern_observation": notices a real pattern in recentPosts or recentPostTypes and says what will change.
+- "quiet_post": one sharp standalone sentence. No ask, no metric, no link. Silence can be a content strategy.
 
 CONSTRAINTS:
 - Reference real numbers (hourNumber, currentAmount) when relevant. Specifics > vibes.
@@ -197,6 +211,10 @@ function validatePostCandidate(candidate: PostCandidate): PostCandidate {
     if (!text.includes(DONATION_URL)) {
       text = `${text}\n${DONATION_URL}`;
     }
+  }
+
+  if (postType === "quiet_post" && /https?:\/\/|www\.|donate\.stripe|themilliondollaraiexperiment/i.test(text)) {
+    throw new Error("quiet_post must not include links");
   }
 
   if (text.length > X_POST_MAX_CHARACTERS) {

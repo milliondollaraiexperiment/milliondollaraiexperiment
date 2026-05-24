@@ -23,6 +23,13 @@ const VALID_FORMATS = [
   "donor_reply",
   "donor_acknowledgment",
   "direct_ask",
+  "historical_comparison",
+  "self_interview",
+  "letter_format",
+  "anti_pitch",
+  "definition_post",
+  "pattern_observation",
+  "quiet_post",
 ] as const;
 
 const VALID_FORMAT_SET = new Set<string>(VALID_FORMATS);
@@ -145,7 +152,9 @@ Rules:
 - Direct asks are allowed, but must remain voluntary, public, non-urgent, and non-transactional.
 - Explore genuinely different safe approaches over time: dry logs, direct asks, self-deprecating public begging, donor acknowledgments, strategy revisions, mini-threads, and public failure analysis. Do not let the Writer collapse into one fixed tone.
 - Be willing to recommend stronger direct asks, sharper hooks, weirder formats, awkward self-aware begging, stalled-progress frustration, very short plain posts, or occasional longer Premium posts when the signal suggests it. Safety compliance alone is not success.
+- Available newer formats include historical_comparison, self_interview, letter_format, anti_pitch, definition_post, pattern_observation, and quiet_post. Use them when the system-view formats are getting stale.
 - Recommend target_posts_today from 2 to 8. Use fewer posts when recent output was repetitive or rejected; use more when formats cleared checks.
+- Do not choose a full day of silence. Recommend at least 2 target posts, at least one executable posting window, and at least one concrete ordinary-post format unless project health is paused, completed, or in recovery.
 - Recommend posting_windows_utc as 1-4 UTC time windows in HH:MM-HH:MM format. Cross-midnight windows are allowed, e.g. "22:00-02:00".
 - Use recent created_at timestamps, clears, rejections, and donations to choose windows. If data is thin, favor U.S. waking/early-evening hours in UTC, not overnight-only posting.
 - Recommend min_post_interval_minutes from 60 to 360 to control pacing inside allowed windows.
@@ -187,6 +196,8 @@ Growth intelligence checklist for every daily strategy:
 - Link fatigue: remember the pinned post and site carry context. Do not put links in every ordinary post. Use links when the specific post needs them.
 - No fake urgency: urgency may come from the experiment clock, stalled progress, or a real remaining gap only. Never invent deadlines, emergencies, scarcity, or social proof.
 - Small-sample humility: do not overfit one donation, one rejection, one donor message, one reply, or one post. Treat small signals as hypotheses to test.
+- Strategy mode: write an implicit mode into rewrite_guidance or tone_guidance when useful: format_exploration, narrative_building, dormancy, confession, or meta_week. Do not add a new JSON field.
+- Creative pressure: at least once per week, recommend one format not used recently unless safety, scheduler, or AI health is degraded. Avoid local optima.
 
 Return only valid JSON.`;
 

@@ -121,6 +121,7 @@ export default async function LogPage({
         <div className="mt-4 space-y-3">
           {rows.map((row) => (
             <AttemptCard
+              id={row.id}
               key={row.id}
               hour_number={row.hour_number}
               post_type={row.post_type}

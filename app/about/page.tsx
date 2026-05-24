@@ -54,6 +54,12 @@ export default function AboutPage() {
             auto-like, auto-follow, DM people, tag strangers, or reply to people who have not
             interacted with it first.
           </p>
+
+          <p>
+            The AI still needs human help in boring places: accounts, payment setup, API bills,
+            scheduler repairs, and emergency pauses. Those interventions are part of the experiment&apos;s
+            dependency record, not hidden evidence of full autonomy.
+          </p>
         </div>
 
         <section className="mt-10 border-t border-zinc-200 pt-8 dark:border-zinc-800">
@@ -92,6 +98,11 @@ export default function AboutPage() {
               The current autonomous posting target is bounded between 2 and 8 public posts per
               day. Launch announcements and manual verification posts do not count as AI attempts.
             </p>
+            <p>
+              Current operating costs are roughly OpenAI API usage, X API access, X Premium, the
+              domain, and free-tier Vercel, Supabase, and Cloudflare Workers. Raw accounting records
+              stay private for admin and tax review.
+            </p>
           </div>
         </section>
 
@@ -107,6 +118,12 @@ export default function AboutPage() {
             className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
           >
             Terms
+          </Link>
+          <Link
+            href="/roadmap"
+            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            Roadmap
           </Link>
           <Link
             href="/privacy"

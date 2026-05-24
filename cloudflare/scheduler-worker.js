@@ -9,7 +9,15 @@ function baseUrl(env) {
 }
 
 function jobForCron(cron) {
-  return cron === "0,15,30,45 4,5 * * *" ? "daily" : "hourly";
+  if (cron === "0,15,30,45 0,1 * * *") return "daily";
+  if (cron === "*/15 * * * *" || cron === "0 * * * *") return "hourly";
+  throw new Error(`No matching scheduler job for cron: ${cron}`);
+}
+
+function jobUrl(job, env) {
+  if (job === "hourly" && env.HOURLY_CRON_URL) return env.HOURLY_CRON_URL;
+  if (job === "daily" && env.DAILY_CRON_URL) return env.DAILY_CRON_URL;
+  return `${baseUrl(env)}${JOBS[job]}`;
 }
 
 async function callJob(job, env) {
@@ -17,7 +25,7 @@ async function callJob(job, env) {
     throw new Error("CRON_SECRET is not configured");
   }
 
-  const url = `${baseUrl(env)}${JOBS[job]}`;
+  const url = jobUrl(job, env);
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -41,8 +49,13 @@ async function callJob(job, env) {
 
 const worker = {
   async scheduled(event, env, ctx) {
+    console.log(`Scheduled trigger: ${event.cron}`);
     const job = jobForCron(event.cron);
     ctx.waitUntil(callJob(job, env));
+  },
+
+  async fetch() {
+    return new Response("Million Dollar AI scheduler is alive.");
   },
 };
 

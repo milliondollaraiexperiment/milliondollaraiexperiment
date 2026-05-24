@@ -181,21 +181,6 @@ function formatUsd(cents: number) {
   }).format(cents / 100);
 }
 
-function formatUtcWindowWithEt(window: string) {
-  const match = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(window);
-  if (!match) return window;
-  const [, startHour, startMinute, endHour, endMinute] = match;
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), Number(startHour), Number(startMinute)));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), Number(endHour), Number(endMinute)));
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${window} UTC (${formatter.format(start)}-${formatter.format(end)} ET)`;
-}
-
 function SiteHeader() {
   return (
     <header className="mb-10 flex flex-col gap-4 border-b border-zinc-200 pb-5 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
@@ -376,7 +361,7 @@ function LatestStrategy({
               Posting windows UTC
             </p>
             <StrategyPillList
-              items={(strategy?.posting_windows_utc ?? []).map(formatUtcWindowWithEt)}
+              items={(strategy?.posting_windows_utc ?? []).map((window) => `${window} UTC`)}
             />
           </div>
         )}

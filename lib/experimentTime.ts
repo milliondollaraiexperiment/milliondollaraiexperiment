@@ -1,56 +1,24 @@
-const ET_TIME_ZONE = "America/New_York";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-type EtParts = {
+type UtcParts = {
   year: number;
   month: number;
   day: number;
 };
 
-const etDateFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: ET_TIME_ZONE,
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-const etOffsetFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: ET_TIME_ZONE,
-  timeZoneName: "shortOffset",
-});
-
-function etParts(date: Date): EtParts {
-  const parts = etDateFormatter.formatToParts(date);
-  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+function utcParts(date: Date): UtcParts {
   return {
-    year: get("year"),
-    month: get("month"),
-    day: get("day"),
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
   };
 }
 
-function etOffsetMs(date: Date): number {
-  const timeZoneName = etOffsetFormatter
-    .formatToParts(date)
-    .find((part) => part.type === "timeZoneName")?.value;
-  const match = /^GMT([+-])(\d{1,2})(?::(\d{2}))?$/.exec(timeZoneName ?? "");
-  if (!match) {
-    return -4 * 60 * 60 * 1000;
-  }
-  const sign = match[1] === "-" ? -1 : 1;
-  const hours = Number(match[2]);
-  const minutes = Number(match[3] ?? 0);
-  return sign * (hours * 60 + minutes) * 60 * 1000;
+function utcMidnight(parts: UtcParts): Date {
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
 }
 
-function etMidnightUtc(parts: EtParts): Date {
-  let utcMs = Date.UTC(parts.year, parts.month - 1, parts.day);
-  utcMs -= etOffsetMs(new Date(utcMs));
-  utcMs = Date.UTC(parts.year, parts.month - 1, parts.day) - etOffsetMs(new Date(utcMs));
-  return new Date(utcMs);
-}
-
-function addEtDays(parts: EtParts, days: number): EtParts {
+function addUtcDays(parts: UtcParts, days: number): UtcParts {
   const utc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days));
   return {
     year: utc.getUTCFullYear(),
@@ -59,18 +27,22 @@ function addEtDays(parts: EtParts, days: number): EtParts {
   };
 }
 
-function compareEtParts(a: EtParts, b: EtParts): number {
+function compareUtcParts(a: UtcParts, b: UtcParts): number {
   return Date.UTC(a.year, a.month - 1, a.day) - Date.UTC(b.year, b.month - 1, b.day);
+}
+
+function formatUtcDate(parts: UtcParts) {
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
 }
 
 export function getDailySummaryWindow(
   startedAtIso: string | null | undefined,
   now = new Date(),
 ) {
-  const todayEt = etParts(now);
-  const yesterdayEt = addEtDays(todayEt, -1);
-  const windowEnd = etMidnightUtc(todayEt);
-  let windowStart = etMidnightUtc(yesterdayEt);
+  const todayUtc = utcParts(now);
+  const yesterdayUtc = addUtcDays(todayUtc, -1);
+  const windowEnd = utcMidnight(todayUtc);
+  let windowStart = utcMidnight(yesterdayUtc);
   let dayNumber = 1;
 
   if (startedAtIso) {
@@ -78,37 +50,33 @@ export function getDailySummaryWindow(
     if (Number.isFinite(startedAt.getTime()) && startedAt > windowStart) {
       windowStart = startedAt;
     }
-    const launchEt = etParts(startedAt);
+    const launchUtc = utcParts(startedAt);
     const daysSinceLaunch =
       Math.floor(
-        (Date.UTC(yesterdayEt.year, yesterdayEt.month - 1, yesterdayEt.day) -
-          Date.UTC(launchEt.year, launchEt.month - 1, launchEt.day)) /
+        (Date.UTC(yesterdayUtc.year, yesterdayUtc.month - 1, yesterdayUtc.day) -
+          Date.UTC(launchUtc.year, launchUtc.month - 1, launchUtc.day)) /
           DAY_MS,
       ) + 1;
     dayNumber = Math.max(1, daysSinceLaunch);
   }
 
-  const partial = Boolean(startedAtIso && compareEtParts(yesterdayEt, etParts(new Date(startedAtIso))) === 0);
+  const partial = Boolean(startedAtIso && compareUtcParts(yesterdayUtc, utcParts(new Date(startedAtIso))) === 0);
   return {
     dayNumber,
     windowStartIso: windowStart.toISOString(),
     windowEndIso: windowEnd.toISOString(),
     partial,
-    etDate: `${yesterdayEt.year}-${String(yesterdayEt.month).padStart(2, "0")}-${String(
-      yesterdayEt.day,
-    ).padStart(2, "0")}`,
+    etDate: formatUtcDate(yesterdayUtc),
   };
 }
 
 export function getCurrentEtDayWindow(now = new Date()) {
-  const currentEt = etParts(now);
-  const nextEt = addEtDays(currentEt, 1);
+  const currentUtc = utcParts(now);
+  const nextUtc = addUtcDays(currentUtc, 1);
   return {
-    etDate: `${currentEt.year}-${String(currentEt.month).padStart(2, "0")}-${String(
-      currentEt.day,
-    ).padStart(2, "0")}`,
-    windowStartIso: etMidnightUtc(currentEt).toISOString(),
-    windowEndIso: etMidnightUtc(nextEt).toISOString(),
+    etDate: formatUtcDate(currentUtc),
+    windowStartIso: utcMidnight(currentUtc).toISOString(),
+    windowEndIso: utcMidnight(nextUtc).toISOString(),
   };
 }
 
@@ -117,11 +85,11 @@ export function shouldBuildWeeklySummary(dayNumber: number) {
 }
 
 export function shouldBuildMonthlySummary(windowEndIso: string) {
-  const endEt = etParts(new Date(windowEndIso));
-  return endEt.day === 1;
+  const endUtc = utcParts(new Date(windowEndIso));
+  return endUtc.day === 1;
 }
 
 export function monthlyPeriodLabel(windowEndIso: string) {
-  const previousMonthEt = addEtDays(etParts(new Date(windowEndIso)), -1);
-  return `${previousMonthEt.year}-${String(previousMonthEt.month).padStart(2, "0")}`;
+  const previousMonthUtc = addUtcDays(utcParts(new Date(windowEndIso)), -1);
+  return `${previousMonthUtc.year}-${String(previousMonthUtc.month).padStart(2, "0")}`;
 }

@@ -9,7 +9,11 @@ export type DailyRunDecision = {
 
 function isMissingTable(error: { code?: string; message?: string } | null) {
   const message = error?.message?.toLowerCase() ?? "";
-  return error?.code === "42P01" || error?.code?.startsWith("PGRST") || message.includes("daily_runs");
+  return (
+    error?.code === "42P01" ||
+    message.includes("could not find the table") ||
+    (message.includes("relation") && message.includes("does not exist"))
+  );
 }
 
 export async function beginDailyRun(args: {

@@ -114,12 +114,12 @@ export async function GET(req: Request) {
     ok: dailyOk,
     detail: {
       due: dailyDue,
-      expected_et_date: dailyWindow.etDate,
+      expected_utc_date: dailyWindow.etDate,
       latest: dailyRun,
     },
   });
   if (!dailyOk) {
-    failures.push(`no completed daily run for ET date ${dailyWindow.etDate}`);
+    failures.push(`no completed daily run for UTC date ${dailyWindow.etDate}`);
   }
 
   const strategyOk = !dailyDue || Boolean(strategy?.id);

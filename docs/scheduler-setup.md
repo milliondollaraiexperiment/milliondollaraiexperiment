@@ -32,7 +32,7 @@ login, set `CLOUDFLARE_API_TOKEN` in the shell before `npx wrangler deploy`.
 The Worker has two cron triggers:
 
 - `*/15 * * * *` calls `/api/cron/hourly`
-- `0,15,30,45 4,5 * * *` calls `/api/cron/daily`
+- `0,15,30,45 0,1 * * *` calls `/api/cron/daily`
 
 Both requests include:
 

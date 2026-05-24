@@ -3,6 +3,11 @@ import Link from "next/link";
 import { AttemptCard } from "@/components/AttemptCard";
 import { ElapsedClock } from "@/components/ElapsedClock";
 import { ProgressBar } from "@/components/ProgressBar";
+import { MiniStat } from "@/components/site/MiniStat";
+import { Pill } from "@/components/site/Pill";
+import { SectionHeader } from "@/components/site/SectionHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { SiteHeader } from "@/components/site/SiteHeader";
 import { getAiHealthMap } from "@/lib/aiHealth";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
@@ -21,9 +26,6 @@ import type { StrategyHealthRecord } from "@/lib/strategyHealth";
 import type { ProjectSettings, StrategyRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-const DISCLAIMER =
-  "This is an entertainment/social experiment, not a financial product, charity, or investment. Contributions are voluntary and non-refundable. No rewards, equity, returns, or future value are promised.";
 
 const FALLBACK_SETTINGS: ProjectSettings = {
   goal: 1_000_000,
@@ -173,73 +175,6 @@ function formatDollars(amount: number) {
   }).format(amount);
 }
 
-function SiteHeader() {
-  return (
-    <header className="sticky top-0 z-40 bg-[#f8f7f2]/[0.82] shadow-[0_1px_24px_rgba(8,8,10,0.045)] backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3">
-          <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-zinc-950 shadow-[0_0_0_6px_rgba(255,255,255,0.65)]">
-            <span className="h-2 w-3 rounded-full bg-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.9)]" />
-          </span>
-          <span className="truncate text-sm font-black tracking-[-0.03em] text-zinc-950">
-            Million Dollar AI Experiment
-          </span>
-        </Link>
-        <nav className="flex shrink-0 items-center gap-3 text-xs font-bold text-zinc-600 sm:gap-5">
-          <Link className="hidden hover:text-zinc-950 sm:inline" href="/log">
-            Log
-          </Link>
-          <Link className="hidden hover:text-zinc-950 sm:inline" href="/about">
-            About
-          </Link>
-          <Link className="hidden hover:text-zinc-950 md:inline" href="/roadmap">
-            Roadmap
-          </Link>
-          <a
-            className="hidden hover:text-zinc-950 sm:inline"
-            href={X_PROFILE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Follow on X
-          </a>
-          <a
-            href={DONATION_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-full bg-zinc-950 px-4 text-zinc-50 shadow-sm transition hover:bg-zinc-800"
-          >
-            Contribute
-          </a>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-function Pill({
-  children,
-  tone = "neutral",
-}: {
-  children: React.ReactNode;
-  tone?: "neutral" | "green" | "blue" | "amber";
-}) {
-  const styles = {
-    neutral: "bg-zinc-950/[0.06] text-zinc-700",
-    green: "bg-emerald-600/[0.12] text-emerald-800",
-    blue: "bg-blue-600/[0.12] text-blue-800",
-    amber: "bg-amber-500/[0.18] text-amber-800",
-  };
-
-  return (
-    <span
-      className={`inline-flex min-h-7 items-center rounded-full px-3 text-[11px] font-bold ${styles[tone]}`}
-    >
-      {children}
-    </span>
-  );
-}
-
 function HeroMetric({
   value,
   label,
@@ -358,30 +293,6 @@ function HeroSection({
         </div>
       </div>
     </section>
-  );
-}
-
-function SectionHeader({
-  kicker,
-  title,
-  children,
-}: {
-  kicker: string;
-  title: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          {kicker}
-        </p>
-        <h2 className="mt-3 max-w-3xl text-3xl font-black leading-[0.96] tracking-[-0.065em] text-zinc-950 sm:text-5xl">
-          {title}
-        </h2>
-      </div>
-      {children && <div className="max-w-xl text-sm leading-6 text-zinc-600">{children}</div>}
-    </div>
   );
 }
 
@@ -511,25 +422,6 @@ function LatestStrategy({
         ))}
       </div>
     </section>
-  );
-}
-
-function MiniStat({
-  value,
-  label,
-}: {
-  value: string | number;
-  label: string;
-}) {
-  return (
-    <div className="min-w-0 rounded-2xl bg-zinc-950/[0.045] p-4">
-      <p className="truncate font-mono text-lg font-semibold tracking-[-0.04em] text-zinc-950">
-        {value}
-      </p>
-      <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500">
-        {label}
-      </p>
-    </div>
   );
 }
 
@@ -814,48 +706,6 @@ function HowItWorks({ latestStrategy }: { latestStrategy: StrategyRecord | null 
   );
 }
 
-function Footer() {
-  return (
-    <footer className="bg-zinc-950 px-4 py-10 text-zinc-300 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1fr_auto]">
-        <div className="max-w-2xl">
-          <h2 className="text-sm font-black tracking-[-0.03em] text-white">
-            Million Dollar AI Experiment
-          </h2>
-          <p className="mt-3 text-xs leading-6 text-zinc-400">{DISCLAIMER}</p>
-          <p className="mt-3 text-xs leading-6 text-zinc-500">
-            Automated X account managed by a human operator. No auto-like, auto-follow, DMs, or
-            stranger tagging.
-          </p>
-        </div>
-        <nav className="flex flex-wrap gap-x-5 gap-y-3 text-xs font-bold text-zinc-400 md:max-w-xs md:justify-end">
-          <Link className="hover:text-white" href="/about">
-            About
-          </Link>
-          <Link className="hover:text-white" href="/log">
-            Log
-          </Link>
-          <Link className="hover:text-white" href="/roadmap">
-            Roadmap
-          </Link>
-          <Link className="hover:text-white" href="/privacy">
-            Privacy
-          </Link>
-          <Link className="hover:text-white" href="/terms">
-            Terms
-          </Link>
-          <a className="hover:text-white" href={X_PROFILE_URL} target="_blank" rel="noopener noreferrer">
-            Follow on X
-          </a>
-          <a className="hover:text-white" href={DONATION_URL} target="_blank" rel="noopener noreferrer">
-            Contribute
-          </a>
-        </nav>
-      </div>
-    </footer>
-  );
-}
-
 export default async function Home() {
   const {
     settings,
@@ -929,7 +779,7 @@ export default async function Home() {
         />
         <RulesSection />
       </main>
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }

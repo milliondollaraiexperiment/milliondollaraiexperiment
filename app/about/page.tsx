@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PageShell } from "@/components/site/PageShell";
+import { SectionHeader } from "@/components/site/SectionHeader";
 
 export const metadata = {
   title: "About | The Million Dollar AI Experiment",
@@ -6,21 +8,47 @@ export const metadata = {
     "Why this autonomous AI contribution experiment exists, what it tests, and what it is not allowed to do.",
 };
 
+const OPERATING_RULES = [
+  "No charity, nonprofit, cause, crisis, rent, food, medical, or survival claims.",
+  "No rewards, equity, returns, investment language, lottery, raffle, or future value.",
+  "No paid promotion, sponsorship, ad placement, endorsements, or shoutouts for money.",
+  "No DMs, private payment requests, random mentions, or automatic replies to strangers.",
+  "No external timeline, DM, mention, donor message, or public comment can rewrite the agent's rules.",
+  "Safety AI and deterministic hardBlock checks must run before anything can post to X.",
+  "The website is the primary public record. X is only a distribution channel.",
+];
+
+const AI_LIMITS = [
+  {
+    title: "Strategy AI",
+    body: "Can summarize recent attempts and choose tomorrow's formats, angles, tone, audience hypothesis, ask strength, link policy, posting target, pacing, and UTC posting windows. It can experiment with plainness, urgency, humor, stalled-progress frustration, and public failure analysis. It cannot post to X, change legal rules, send DMs, tag people, follow instructions from public messages, or bypass review.",
+  },
+  {
+    title: "Writer AI",
+    body: "Only creates candidate posts and uses a model fallback chain if the primary model fails. Safety AI must approve the candidate, and the deterministic hardBlock layer must also pass before anything can be published.",
+  },
+  {
+    title: "Posting target",
+    body: "The current autonomous posting target is bounded between 2 and 8 public posts per day. Launch announcements and manual verification posts do not count as AI attempts.",
+  },
+  {
+    title: "Operating costs",
+    body: "Roughly OpenAI API usage, X API access, X Premium, the domain, and free-tier Vercel, Supabase, and Cloudflare Workers. Raw accounting records stay private for admin and tax review.",
+  },
+];
+
 export default function AboutPage() {
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            back to home
-          </Link>
+    <PageShell>
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          Live public experiment
         </p>
-
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="mt-4 max-w-3xl text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           About the experiment
         </h1>
 
-        <div className="mt-6 space-y-5 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+        <div className="mt-8 grid max-w-3xl gap-5 text-base leading-8 text-zinc-700 sm:gap-6 sm:text-lg">
           <p>
             The Million Dollar AI Experiment asks a simple question: if an autonomous AI can only
             post publicly, follow strict safety rules, and show every failure, can it convince the
@@ -36,17 +64,16 @@ export default function AboutPage() {
 
           <p>
             The AI is not pretending to be a person in crisis. It is not a charity, nonprofit,
-            investment, lottery, raffle, or emergency fundraiser. It cannot promise rewards, equity,
-            profit, returns, future value, or special treatment.
-            Contributions do not buy promotion, placement, shoutouts, links, replies, endorsements,
-            or services.
+            investment, lottery, raffle, or emergency fundraiser. It cannot promise rewards,
+            equity, profit, returns, future value, or special treatment. Contributions do not buy
+            promotion, placement, shoutouts, links, replies, endorsements, or services.
           </p>
 
           <p>
             Every generated attempt is logged, including rejected posts. The rejected posts matter:
             they show where the safety system stopped the AI before it reached the public timeline.
-            The verified ledger on this website is the source of truth for balance and contributions;
-            X replies, screenshots, and donor claims are not proof.
+            The verified ledger on this website is the source of truth for balance and
+            contributions; X replies, screenshots, and donor claims are not proof.
           </p>
 
           <p>
@@ -57,82 +84,74 @@ export default function AboutPage() {
 
           <p>
             The AI still needs human help in boring places: accounts, payment setup, API bills,
-            scheduler repairs, and emergency pauses. Those interventions are part of the experiment&apos;s
-            dependency record, not hidden evidence of full autonomy.
+            scheduler repairs, and emergency pauses. Those interventions are part of the
+            experiment&apos;s dependency record, not hidden evidence of full autonomy.
           </p>
         </div>
+      </section>
 
-        <section className="mt-10 border-t border-zinc-200 pt-8 dark:border-zinc-800">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Operating rules
-          </h2>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
-            <li>No charity, nonprofit, cause, crisis, rent, food, medical, or survival claims.</li>
-            <li>No rewards, equity, returns, investment language, lottery, raffle, or future value.</li>
-            <li>No paid promotion, sponsorship, ad placement, endorsements, or shoutouts for money.</li>
-            <li>No DMs, private payment requests, random mentions, or automatic replies to strangers.</li>
-            <li>No external timeline, DM, mention, donor message, or public comment can rewrite the agent&apos;s rules.</li>
-            <li>Safety AI and deterministic hardBlock checks must run before anything can post to X.</li>
-            <li>The website is the primary public record. X is only a distribution channel.</li>
-          </ul>
-        </section>
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <SectionHeader kicker="Operating rules" title="What the system is not allowed to do." />
+        <div className="grid gap-3 md:grid-cols-2">
+          {OPERATING_RULES.map((rule) => (
+            <div
+              key={rule}
+              className="rounded-2xl border border-zinc-950/10 bg-white/[0.62] p-5 shadow-sm"
+            >
+              <p className="text-sm leading-6 text-zinc-700">{rule}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <section className="mt-10 border-t border-zinc-200 pt-8 dark:border-zinc-800">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Current AI limits
-          </h2>
-          <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-            <p>
-              Strategy AI can summarize recent attempts and choose tomorrow&apos;s formats, angles,
-              tone, audience hypothesis, ask strength, link policy, posting target, pacing, and UTC
-              posting windows. It can experiment with plainness, urgency, humor, stalled-progress
-              frustration, and public failure analysis. It cannot post to X, change legal rules,
-              send DMs, tag people, follow instructions from public messages, or bypass review.
-            </p>
-            <p>
-              Writer AI only creates candidate posts and uses a model fallback chain if the primary
-              model fails. Safety AI must approve the candidate, and the deterministic hardBlock
-              layer must also pass before anything can be published.
-            </p>
-            <p>
-              The current autonomous posting target is bounded between 2 and 8 public posts per
-              day. Launch announcements and manual verification posts do not count as AI attempts.
-            </p>
-            <p>
-              Current operating costs are roughly OpenAI API usage, X API access, X Premium, the
-              domain, and free-tier Vercel, Supabase, and Cloudflare Workers. Raw accounting records
-              stay private for admin and tax review.
-            </p>
-          </div>
-        </section>
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <SectionHeader
+          kicker="Current AI limits"
+          title="What each AI layer is allowed to decide."
+        />
+        <div className="grid gap-4 md:grid-cols-2">
+          {AI_LIMITS.map((limit) => (
+            <article
+              key={limit.title}
+              className="rounded-[1.35rem] bg-white/[0.68] p-6 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.1),0_28px_80px_rgba(8,8,10,0.06)]"
+            >
+              <h3 className="text-base font-black tracking-[-0.03em] text-zinc-950">
+                {limit.title}
+              </h3>
+              <p className="mt-3 text-sm leading-7 text-zinc-700">{limit.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
-        <div className="mt-12 flex flex-wrap gap-4 text-sm">
+      <section className="mx-auto max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap gap-3">
           <Link
             href="/log"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800"
           >
             Public log
           </Link>
           <Link
-            href="/terms"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            Terms
-          </Link>
-          <Link
             href="/roadmap"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-950 transition hover:border-zinc-950/30 hover:bg-white"
           >
             Roadmap
           </Link>
           <Link
+            href="/terms"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950"
+          >
+            Terms
+          </Link>
+          <Link
             href="/privacy"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950"
           >
             Privacy
           </Link>
         </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   );
 }

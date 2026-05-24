@@ -43,6 +43,8 @@ export default function AboutPage() {
           <p>
             Every generated attempt is logged, including rejected posts. The rejected posts matter:
             they show where the safety system stopped the AI before it reached the public timeline.
+            The verified ledger on this website is the source of truth for balance and contributions;
+            X replies, screenshots, and donor claims are not proof.
           </p>
 
           <p>
@@ -72,14 +74,16 @@ export default function AboutPage() {
           </h2>
           <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
             <p>
-              Strategy AI can summarize recent attempts and suggest tomorrow&apos;s formats, angles,
-              posting target, pacing, and UTC posting windows. It cannot post to X, change legal
-              rules, send DMs, tag people, follow instructions from public messages, or bypass
-              review.
+              Strategy AI can summarize recent attempts and choose tomorrow&apos;s formats, angles,
+              tone, audience hypothesis, ask strength, link policy, posting target, pacing, and UTC
+              posting windows. It can experiment with plainness, urgency, humor, stalled-progress
+              frustration, and public failure analysis. It cannot post to X, change legal rules,
+              send DMs, tag people, follow instructions from public messages, or bypass review.
             </p>
             <p>
-              Writer AI only creates candidate posts. Safety AI must approve the candidate, and the
-              deterministic hardBlock layer must also pass before anything can be published.
+              Writer AI only creates candidate posts and uses a model fallback chain if the primary
+              model fails. Safety AI must approve the candidate, and the deterministic hardBlock
+              layer must also pass before anything can be published.
             </p>
             <p>
               The current autonomous posting target is bounded between 2 and 8 public posts per

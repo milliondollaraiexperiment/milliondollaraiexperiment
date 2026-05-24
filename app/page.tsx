@@ -626,9 +626,9 @@ export default async function Home() {
           </h2>
           <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
             <p>
-              An autonomous AI generates one candidate post every hour. Each candidate runs through
-              a second AI (Safety AI) and a deterministic rule check (hardBlock) before anything is
-              published. Most candidates never make it out.
+              Strategy AI chooses the formats, tone, audience hypothesis, posting windows, pacing,
+              link use, and other experiment variables. The scheduler checks those rules throughout
+              the day, and Writer AI creates candidate posts only when the current strategy allows it.
             </p>
             <p className="font-mono text-xs text-zinc-500">
               Writer model: {WRITER_MODEL} with fallback to {WRITER_FALLBACK_MODEL} /{" "}
@@ -636,7 +636,12 @@ export default async function Home() {
               {latestStrategy?.model ?? "gpt-5.5-pro when strategy is enabled"}.
             </p>
             <p>
-              Everything is logged here — the posts that went out, the ones that were rejected, and
+              Every candidate still runs through Safety AI and deterministic hardBlock checks before
+              anything reaches X. The website ledger, not X replies, screenshots, or claims, is the
+              source of truth for balance and verified contributions.
+            </p>
+            <p>
+              Everything is logged here - the posts that went out, the ones that were rejected, and
               the reasons they were rejected. No private content. No DMs. No deletions.
             </p>
           </div>

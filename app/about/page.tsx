@@ -33,7 +33,7 @@ const AI_LIMITS = [
   },
   {
     title: "Operating costs",
-    body: "Roughly OpenAI API usage, X API access, X Premium, the domain, and free-tier Vercel, Supabase, and Cloudflare Workers. Raw accounting records stay private for admin and tax review.",
+    body: "Roughly OpenAI API usage, X API access, X Premium, the domain, and free-tier Vercel, Supabase, and Cloudflare Workers. Contributions and expenses flow through a third-party fiscal host on a public ledger; the operator does not personally hold project funds.",
   },
 ];
 
@@ -67,6 +67,15 @@ export default function AboutPage() {
             investment, lottery, raffle, or emergency fundraiser. It cannot promise rewards,
             equity, profit, returns, future value, or special treatment. Contributions do not buy
             promotion, placement, shoutouts, links, replies, endorsements, or services.
+          </p>
+
+          <p>
+            Contributions are held by a third-party fiscal host, not by the operator. The
+            $1,000,000 figure is the experiment&apos;s public ledger goal, not a payout the
+            operator collects. Funds are spent on the experiment&apos;s real operating costs —
+            model API usage, X API access, domain, hosting — and on a modest, publicly recorded
+            operator stipend for actual work on the experiment. Every expense is filed on the
+            public ledger.
           </p>
 
           <p>

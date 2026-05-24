@@ -43,3 +43,6 @@ cloudflare/wrangler.toml
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local agent/tool scratch (not part of the project)
+.superpowers/

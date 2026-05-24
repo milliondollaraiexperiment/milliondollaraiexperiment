@@ -13,6 +13,8 @@ export type PostCandidate = {
   post_type: string;
   text: string;
   public_strategy_note: string;
+  writer_model?: string;
+  writer_model_failures?: string[];
 };
 
 export type ThreadCandidate = {

@@ -3,7 +3,12 @@ import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
 import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
-import { SAFETY_MODEL, WRITER_MODEL } from "@/lib/openai";
+import {
+  SAFETY_MODEL,
+  WRITER_FALLBACK_MODEL,
+  WRITER_MODEL,
+  WRITER_SECOND_FALLBACK_MODEL,
+} from "@/lib/openai";
 import { ProgressBar } from "@/components/ProgressBar";
 import { AttemptCard } from "@/components/AttemptCard";
 import { ElapsedClock } from "@/components/ElapsedClock";
@@ -626,7 +631,8 @@ export default async function Home() {
               published. Most candidates never make it out.
             </p>
             <p className="font-mono text-xs text-zinc-500">
-              Writer model: {WRITER_MODEL}. Safety model: {SAFETY_MODEL}. Strategy model:{" "}
+              Writer model: {WRITER_MODEL} with fallback to {WRITER_FALLBACK_MODEL} /{" "}
+              {WRITER_SECOND_FALLBACK_MODEL}. Safety model: {SAFETY_MODEL}. Strategy model:{" "}
               {latestStrategy?.model ?? "gpt-5.5-pro when strategy is enabled"}.
             </p>
             <p>

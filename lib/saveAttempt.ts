@@ -12,6 +12,10 @@ export async function saveAttempt(
   options: SaveOptions,
 ): Promise<{ id: string }> {
   const { context, post, safety, hard } = record;
+  const writerModelNote = post.writer_model ? `Writer model: ${post.writer_model}.` : null;
+  const publicStrategyNote = [post.public_strategy_note, writerModelNote]
+    .filter(Boolean)
+    .join(" ");
 
   const { data, error } = await supabaseAdmin
     .from("attempts")
@@ -24,7 +28,7 @@ export async function saveAttempt(
       safety_reasons: safety.reasons,
       hard_block_reason: hard.ok ? null : hard.reason,
       x_post_id: options.xPostId ?? null,
-      public_strategy_note: post.public_strategy_note,
+      public_strategy_note: publicStrategyNote,
       error_message: options.errorMessage ?? null,
     })
     .select("id")

@@ -1,4 +1,9 @@
-import { openai, WRITER_MODEL } from "./openai";
+import {
+  openai,
+  WRITER_FALLBACK_MODEL,
+  WRITER_MODEL,
+  WRITER_SECOND_FALLBACK_MODEL,
+} from "./openai";
 import { X_POST_MAX_CHARACTERS } from "./xPostLimits";
 import type { Context, PostCandidate } from "./types";
 
@@ -205,6 +210,39 @@ function summarizeRewriteFeedback(feedback: PostRewriteFeedback[] = []) {
   }));
 }
 
+const WRITER_MODEL_CHAIN = Array.from(
+  new Set([WRITER_MODEL, WRITER_FALLBACK_MODEL, WRITER_SECOND_FALLBACK_MODEL].filter(Boolean)),
+);
+
+async function callWriterModel(model: string, userMessage: string): Promise<PostCandidate> {
+  const completion = await openai.chat.completions.create({
+    model,
+    messages: [
+      { role: "system", content: WRITER_SYSTEM_PROMPT },
+      { role: "system", content: TONE_ADAPTATION_PROMPT },
+      { role: "system", content: X_POST_VOICE_GUARD },
+      { role: "user", content: userMessage },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "post_candidate",
+        strict: true,
+        schema: POST_SCHEMA,
+      },
+    },
+    temperature: 0.9,
+  });
+
+  const raw = completion.choices[0]?.message?.content;
+  if (!raw) {
+    throw new Error("Writer AI returned empty content");
+  }
+
+  const parsed = JSON.parse(raw) as PostCandidate;
+  return validatePostCandidate(parsed);
+}
+
 export async function generatePost(
   context: Context,
   options: GeneratePostOptions = {},
@@ -273,30 +311,20 @@ export async function generatePost(
     2,
   );
 
-  const completion = await openai.chat.completions.create({
-    model: WRITER_MODEL,
-    messages: [
-      { role: "system", content: WRITER_SYSTEM_PROMPT },
-      { role: "system", content: TONE_ADAPTATION_PROMPT },
-      { role: "system", content: X_POST_VOICE_GUARD },
-      { role: "user", content: userMessage },
-    ],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "post_candidate",
-        strict: true,
-        schema: POST_SCHEMA,
-      },
-    },
-    temperature: 0.9,
-  });
-
-  const raw = completion.choices[0]?.message?.content;
-  if (!raw) {
-    throw new Error("Writer AI returned empty content");
+  const failures: string[] = [];
+  for (const model of WRITER_MODEL_CHAIN) {
+    try {
+      const candidate = await callWriterModel(model, userMessage);
+      return {
+        ...candidate,
+        writer_model: model,
+        writer_model_failures: failures,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      failures.push(`${model}: ${message}`);
+    }
   }
 
-  const parsed = JSON.parse(raw) as PostCandidate;
-  return validatePostCandidate(parsed);
+  throw new Error(`Writer model chain failed: ${failures.join(" / ")}`);
 }

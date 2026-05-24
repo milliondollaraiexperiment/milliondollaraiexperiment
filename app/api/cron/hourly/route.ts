@@ -272,6 +272,9 @@ export async function GET(req: Request) {
         hour_number: context.hourNumber,
         candidate_attempts: rewriteFeedback.length,
         rewrite_reasons: rewriteFeedback.map((item) => item.reason),
+        writer_model_failures: rewriteFeedback
+          .filter((item) => item.source === "writer")
+          .map((item) => item.reason),
         today_posted_count: todayPostedCount,
         daily_limit: effectiveDailyLimit,
         settings_daily_limit: dailyLimit,
@@ -317,6 +320,8 @@ export async function GET(req: Request) {
       strategy_target_posts_today: strategyTarget ?? null,
       candidate_attempts: rewriteFeedback.length + 1,
       rewrite_reasons: rewriteFeedback.map((item) => item.reason),
+      writer_model: finalRecord.post.writer_model ?? null,
+      writer_model_failures: finalRecord.post.writer_model_failures ?? [],
       dry_run: dryRun,
     };
     await recordSchedulerRun({

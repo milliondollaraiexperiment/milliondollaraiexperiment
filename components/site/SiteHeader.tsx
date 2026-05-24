@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DONATION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
+import { X_PROFILE_URL } from "@/lib/publicUrls";
 
 export function SiteHeader() {
   return (
@@ -23,21 +23,15 @@ export function SiteHeader() {
           <Link className="hidden hover:text-zinc-950 md:inline" href="/roadmap">
             Roadmap
           </Link>
+          {/* Contribute CTA paused while we evaluate Open Source Collective.
+              Re-enable by restoring the anchor below pointing at DONATION_URL. */}
           <a
-            className="hidden hover:text-zinc-950 sm:inline"
+            className="inline-flex h-9 items-center rounded-full bg-zinc-950 px-4 text-zinc-50 shadow-sm transition hover:bg-zinc-800"
             href={X_PROFILE_URL}
             target="_blank"
             rel="noopener noreferrer"
           >
             Follow on X
-          </a>
-          <a
-            href={DONATION_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center rounded-full bg-zinc-950 px-4 text-zinc-50 shadow-sm transition hover:bg-zinc-800"
-          >
-            Contribute
           </a>
         </nav>
       </div>

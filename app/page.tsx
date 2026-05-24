@@ -17,7 +17,7 @@ import {
   WRITER_MODEL,
   WRITER_SECOND_FALLBACK_MODEL,
 } from "@/lib/openai";
-import { DONATION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
+import { X_PROFILE_URL } from "@/lib/publicUrls";
 import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
 import { getStrategyHealth } from "@/lib/strategyHealth";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -247,6 +247,8 @@ function HeroSection({
             rejection, contribution, strategy update, and failure is logged.
           </p>
 
+          {/* Contribute CTA paused while we evaluate Open Source Collective.
+              Restore the Contribute anchor (DONATION_URL) here when ready. */}
           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-row">
             <a
               href={X_PROFILE_URL}
@@ -256,17 +258,9 @@ function HeroSection({
             >
               Follow on X
             </a>
-            <a
-              href={DONATION_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-950 shadow-[0_16px_34px_rgba(8,8,10,0.06)] transition hover:border-zinc-950/30 hover:bg-white sm:h-12 sm:px-6"
-            >
-              Contribute
-            </a>
             <Link
               href="/log"
-              className="hidden h-12 items-center justify-center rounded-full border border-zinc-950/15 bg-white/55 px-6 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950 sm:inline-flex"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-950 shadow-[0_16px_34px_rgba(8,8,10,0.06)] transition hover:border-zinc-950/30 hover:bg-white sm:h-12 sm:px-6"
             >
               View ledger
             </Link>

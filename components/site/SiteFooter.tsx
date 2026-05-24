@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DONATION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
+import { X_PROFILE_URL } from "@/lib/publicUrls";
 
 const DISCLAIMER =
   "This is an entertainment/social experiment, not a financial product, charity, or investment. Contributions are voluntary and non-refundable. No rewards, equity, returns, or future value are promised.";
@@ -37,9 +37,7 @@ export function SiteFooter() {
           <a className="hover:text-white" href={X_PROFILE_URL} target="_blank" rel="noopener noreferrer">
             Follow on X
           </a>
-          <a className="hover:text-white" href={DONATION_URL} target="_blank" rel="noopener noreferrer">
-            Contribute
-          </a>
+          {/* Contribute link paused while we evaluate Open Source Collective. */}
         </nav>
       </div>
     </footer>

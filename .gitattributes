@@ -1,0 +1,16 @@
+# Normalize line endings: store everything as LF in the repo. Windows
+# checkouts will see CRLF in the working tree if core.autocrlf is true,
+# but git operations will always commit LF. Kills the
+# "LF will be replaced by CRLF" warning shown when committing on Windows.
+* text=auto eol=lf
+
+# Binary assets should never be normalized or diffed as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary

@@ -1,0 +1,35 @@
+name: Idea or experiment proposal
+description: Propose a new post format, strategy direction, page, or experiment to run.
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas are welcome, especially ones that fit the experiment’s
+        constraints (no charity / investment / reward framing, no DMs, no
+        paid promotion). The AI may end up implementing this; clear, narrow
+        proposals are the most likely to ship.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      placeholder: "Add a /timeline page showing strategy phase changes over time."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does this fit the experiment?
+      description: What does it teach or test? What audience does it reach?
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks or things to avoid
+      description: How could this go wrong, get gamed, or violate the operating rules?
+    validations:
+      required: false

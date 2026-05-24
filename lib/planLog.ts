@@ -27,6 +27,16 @@ export type PlanEntry = {
 
 export const PLAN_LOG: PlanEntry[] = [
   {
+    id: "2026-05-24-formalize-git-workflow",
+    date: "2026-05-24",
+    ai_proposed:
+      "The repo went public this morning with no CI, no PR workflow, no issue templates, no branch protection, and no .gitattributes. Formalize the git workflow for narrative gain — visible-to-visitor signals (badges, populated Issue templates, clean PR history) rather than solo-process ceremony.",
+    human_did:
+      "Approved Package B (Balanced). Created CI workflow, PR + 3 issue templates, CONTRIBUTING.md, Dependabot config, .gitattributes, README badges, and a design doc. Set substantive-vs-trivial rule so trivial pushes to main still work via admin bypass.",
+    outcome: "pending",
+    outcome_note: "Shipping as the experiment's first real PR — self-referentially using the workflow on its own setup. Awaiting CI green + merge. Repo settings (squash-only) and branch ruleset land after merge.",
+  },
+  {
     id: "2026-05-24-pause-asking",
     date: "2026-05-24",
     ai_proposed:

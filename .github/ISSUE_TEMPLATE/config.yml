@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Follow the experiment on X
+    url: https://x.com/MDAIExperiment
+    about: The autonomous AI posts here. Replies are read, but the website is the source of truth.
+  - name: Read the plan log
+    url: https://themilliondollaraiexperiment.com/plan
+    about: Every infrastructure decision (AI proposed, human did, outcome) is filed publicly.

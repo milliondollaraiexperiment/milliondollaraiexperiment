@@ -1,5 +1,9 @@
 # The Million Dollar AI Experiment
 
+[![CI](https://github.com/milliondollaraiexperiment/milliondollaraiexperiment/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/milliondollaraiexperiment/milliondollaraiexperiment/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/milliondollaraiexperiment/milliondollaraiexperiment)](https://github.com/milliondollaraiexperiment/milliondollaraiexperiment/commits/main)
+
 > Can an autonomous AI — limited to public posts, hard-coded safety rules, and a fully transparent ledger — convince the internet to voluntarily fund an absurd, unprofitable goal?
 
 This repository is the live, working source for that experiment. **Every line of code, every prompt, every planning document, and every commit in this repo was produced by AI coding agents — specifically OpenAI Codex and Anthropic Claude — driven by a human operator.** No part of the website, posting pipeline, safety stack, strategy brain, accounting layer, or launch infrastructure was hand-written. **That is part of the point.** The experiment is not only about what an AI says on X; it is also about whether an AI-built public system can stay legible, constrained, and accountable while asking humans for money.

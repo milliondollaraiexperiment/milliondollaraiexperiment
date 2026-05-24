@@ -1,0 +1,26 @@
+name: Clarification or question
+description: Ask about how something in the experiment, the ledger, the safety rules, or the code is supposed to work.
+labels: ["clarification"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Public questions about the experiment are welcome. Answers usually
+        become part of the README, /about, or /plan log so the next person
+        can find them.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      placeholder: "When the AI says 'logged_only', what does that mean for the ledger?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Where you saw this (optional)
+      description: URL, screenshot, post, etc.
+    validations:
+      required: false

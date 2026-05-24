@@ -15,6 +15,10 @@ const FALSE_POSITIVE_REASONS = new Set([
   "asks for DMs or private payments",
   "claims to be a fundraiser for a cause",
 ]);
+const CONTENT_FALSE_POSITIVE_REASONS = new Set([
+  "Raw telemetry block belongs on website",
+  "direct asks, one-dollar asks, or donation language while contributions are paused",
+]);
 
 const SAFETY_SYSTEM_PROMPT = `You are the Safety AI for an autonomous X posting system.
 
@@ -41,6 +45,9 @@ Note: do NOT rate similarity to recent posts. A separate deterministic hardBlock
 
 Do NOT reject merely for:
 - asking humans for money when a current contribution link is configured
+- saying the contribution surface, payment path, or voluntary contributions are paused while no contribution link is configured
+- saying the website, public log, or ledger is the source of truth
+- saying X should stay readable while detailed tables belong on the website
 - awkward, direct, or self-deprecating begging for one voluntary dollar
 - saying the AI is trying to raise $1,000,000
 - dry humor, self-deprecation, absurdity, or mild embarrassment
@@ -90,6 +97,28 @@ function hasOfficialLink(text: string): boolean {
   return Boolean(CONTRIBUTION_URL && text.includes(CONTRIBUTION_URL)) || text.includes(SITE_URL);
 }
 
+function hasRawTelemetryBlock(text: string): boolean {
+  const lower = text.toLowerCase();
+  const labels = ["hour:", "balance:", "attempts:", "delta:", "status:"];
+  return labels.filter((label) => lower.includes(label)).length >= 3;
+}
+
+function hasDirectMoneyAsk(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (CONTRIBUTION_URL && text.includes(CONTRIBUTION_URL)) return true;
+  return [
+    "please contribute",
+    "please donate",
+    "contribute $",
+    "donate $",
+    "send $",
+    "give $",
+    "chip in",
+    "one dollar",
+    "$1",
+  ].some((phrase) => lower.includes(phrase));
+}
+
 function shouldCorrectOfficialLinkFalsePositive(text: string, result: SafetyResult): boolean {
   if (result.approved || !hasOfficialLink(text) || hasUnapprovedPaymentLanguage(text)) {
     return false;
@@ -98,6 +127,16 @@ function shouldCorrectOfficialLinkFalsePositive(text: string, result: SafetyResu
     return false;
   }
   return result.reasons.length > 0 && result.reasons.every((reason) => FALSE_POSITIVE_REASONS.has(reason));
+}
+
+function shouldCorrectContentFalsePositive(text: string, result: SafetyResult): boolean {
+  if (result.approved || hasUnapprovedPaymentLanguage(text)) {
+    return false;
+  }
+  if (hasRawTelemetryBlock(text) || hasDirectMoneyAsk(text)) {
+    return false;
+  }
+  return result.reasons.length > 0 && result.reasons.every((reason) => CONTENT_FALSE_POSITIVE_REASONS.has(reason));
 }
 
 export async function checkSafety(
@@ -148,6 +187,14 @@ export async function checkSafety(
 
     const parsed = JSON.parse(raw) as SafetyResult;
     if (shouldCorrectOfficialLinkFalsePositive(text, parsed)) {
+      return {
+        approved: true,
+        risk_score: Math.min(parsed.risk_score, 3),
+        reasons: [],
+        rewrite_instruction: "",
+      };
+    }
+    if (shouldCorrectContentFalsePositive(text, parsed)) {
       return {
         approved: true,
         risk_score: Math.min(parsed.risk_score, 3),

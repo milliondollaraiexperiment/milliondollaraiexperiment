@@ -18,7 +18,7 @@ import {
   WRITER_SECOND_FALLBACK_MODEL,
 } from "@/lib/openai";
 import { getRecentPlanEntries, type PlanEntry } from "@/lib/planLog";
-import { X_PROFILE_URL } from "@/lib/publicUrls";
+import { CONTRIBUTION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
 import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
 import { getStrategyHealth } from "@/lib/strategyHealth";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -269,6 +269,7 @@ function HeroSection({
   rejectedCount: number;
   elapsedSeconds: number;
 }) {
+  const contributionsUnavailable = settings.contributions_disabled || !CONTRIBUTION_URL;
   return (
     <section className="relative isolate overflow-hidden px-4 pb-8 pt-6 sm:min-h-[710px] sm:px-6 sm:pb-12 sm:pt-10 lg:min-h-[740px] lg:px-8">
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(248,247,242,0.98)_0%,rgba(248,247,242,0.9)_35%,rgba(248,247,242,0.38)_67%,rgba(248,247,242,0.76)_100%),radial-gradient(circle_at_78%_18%,rgba(231,184,74,0.2),transparent_23rem),radial-gradient(circle_at_0%_25%,rgba(82,105,143,0.12),transparent_22rem)]" />
@@ -291,7 +292,7 @@ function HeroSection({
           </p>
 
           {/* Contribute CTA paused while we evaluate Open Source Collective.
-              Restore the Contribute anchor only after CONTRIBUTION_URL points at an approved surface. */}
+              Re-enable only after CONTRIBUTION_URL points at an approved surface. */}
           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-row">
             <a
               href={X_PROFILE_URL}
@@ -308,7 +309,7 @@ function HeroSection({
               View ledger
             </Link>
           </div>
-          {settings.contributions_disabled && (
+          {contributionsUnavailable && (
             <p className="mt-4 max-w-md text-[13px] leading-6 text-zinc-500 sm:mt-5">
               Voluntary contributions are temporarily paused while we sort out the payment path. The
               experiment, the log, and the AI continue to run in public.
@@ -369,7 +370,7 @@ function SystemStatus({
   const copy = completed
     ? "The experiment is archived; autonomous contribution posts are stopped."
     : paused
-      ? "Autonomous X posting is paused. The public ledger and payment webhook remain online."
+      ? "Autonomous X posting is paused. The public ledger remains online."
       : "Autonomous posting is live. The account is automated and managed by a human operator.";
 
   const lastPostedLabel = lastPosted

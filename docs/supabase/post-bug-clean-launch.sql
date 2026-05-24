@@ -16,6 +16,8 @@
 --     zero counters.
 --   - Resets ai_health rows (writer, safety, summary, strategy) to healthy
 --     with zero counters.
+--   - Forces settings.project.contributions_disabled = true until an
+--     approved fiscal-host / payment surface is configured.
 --   - Seeds one fresh strategy_memories row (active = true) with the
 --     post-bug avoid/tone/link rules, including the
 --     "first-day embarrassment before real stalled evidence" guard.
@@ -29,6 +31,10 @@
 --   - select component, status from ai_health;  -- expect 4 healthy rows.
 
 begin;
+
+update settings
+set value = coalesce(value, '{}'::jsonb) || jsonb_build_object('contributions_disabled', true)
+where key = 'project';
 
 with project as (
   select (value->>'started_at')::timestamptz as started_at
@@ -98,7 +104,7 @@ insert into strategy_memories (
 )
 values (
   true,
-  'Clean post-bug launch memory. Ignore scheduler/summary/thread bugs from the previous launch window. Strategy should decide posting strategy from the clean public start, current ledger, and future outcomes.',
+  'Clean post-bug launch memory. Ignore scheduler/summary/thread bugs from the previous launch window. Contribution surface is paused while a fiscal host is reviewed. Strategy should decide posting strategy from the clean public start, current ledger, paused contribution state, and future outcomes.',
   array[]::text[],
   array['Raw daily summary threads and raw strategy revisions should not be treated as ordinary X content.'],
   array[
@@ -112,18 +118,21 @@ values (
     'reward or return promises',
     'paid promotion or shoutout-for-money',
     'raw dashboard telemetry as X posts',
-    'first-day embarrassment before real stalled evidence'
+    'first-day embarrassment before real stalled evidence',
+    'direct asks while contributions are paused',
+    'contribution links before an approved contribution surface is configured'
   ],
   array[]::text[],
   array[
     'cold_start should be clean, legible, curious, and direct',
-    'embarrassment/frustration belongs only after real stalled evidence'
+    'embarrassment/frustration belongs only after real stalled evidence',
+    'acknowledge the contribution pause plainly without naming a processor or promising a date'
   ],
   array[
-    'pinned post and website carry core links',
-    'ordinary posts should not link every time'
+    'pinned post and website carry core project links',
+    'ordinary posts should not include a contribution link until contributions are re-enabled'
   ],
-  '{"cleanup":"post_bug_clean_launch","human_seed":"safety_and_trust_boundaries_only"}'::jsonb
+  '{"cleanup":"post_bug_clean_launch","human_seed":"safety_and_trust_boundaries_only","contributions_disabled":true}'::jsonb
 );
 
 commit;

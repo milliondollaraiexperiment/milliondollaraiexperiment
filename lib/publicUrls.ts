@@ -2,9 +2,13 @@ export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://themilliondollaraiexperiment.com";
 
 export const X_PROFILE_URL =
-  process.env.NEXT_PUBLIC_X_PROFILE_URL ?? "https://x.com/FundMeBotAI";
+  process.env.NEXT_PUBLIC_X_PROFILE_URL ?? "https://x.com/MDAIExperiment";
 
-export const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
+export const CONTRIBUTION_URL = process.env.NEXT_PUBLIC_CONTRIBUTION_URL ?? "";
+
+// Backward-compatible alias for older imports. This is intentionally empty
+// unless a current, approved contribution surface is configured.
+export const DONATION_URL = CONTRIBUTION_URL;
 
 export function absoluteUrl(path = "/") {
   return new URL(path, SITE_URL).toString();

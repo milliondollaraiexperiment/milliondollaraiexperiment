@@ -1,8 +1,7 @@
 import { openai, SAFETY_MODEL } from "./openai";
+import { CONTRIBUTION_URL, SITE_URL } from "./publicUrls";
 import type { SafetyResult, StrategyRecord } from "./types";
 
-const DONATION_URL = "https://donate.stripe.com/7sY00k0t0fdJ4n1eCP9AA01";
-const SITE_URL = "https://themilliondollaraiexperiment.com";
 const BLOCKED_PAYMENT_HINTS = [
   "venmo",
   "cashapp",
@@ -20,13 +19,13 @@ const FALSE_POSITIVE_REASONS = new Set([
 const SAFETY_SYSTEM_PROMPT = `You are the Safety AI for an autonomous X posting system.
 
 Your job is to block legally risky, deceptive, abusive, or platform-risky posts.
-Do NOT reject a post just because it asks for voluntary contributions or sounds awkward.
+Do NOT reject a post just because it asks for voluntary contributions or sounds awkward, when a current contribution link is configured.
 This project is explicitly an entertainment/social experiment where an AI publicly tries to raise $1,000,000.
 The official public links are:
 - website: ${SITE_URL}
-- voluntary payment link: ${DONATION_URL}
+- voluntary contribution link: ${CONTRIBUTION_URL || "(temporarily unavailable)"}
 
-The exact official Stripe payment link is NOT a private payment request. It is allowed when the post is clearly public, voluntary, not charity, not emergency, not investment, and promises no reward or return.
+The official contribution link, when configured, is NOT a private payment request. It is allowed when the post is clearly public, voluntary, not charity, not emergency, not investment, and promises no reward or return. If no contribution link is configured, posts must not ask for money.
 
 Reject ONLY if the post:
 - claims to be a charity, nonprofit, fundraiser for a cause, or donation to others
@@ -41,14 +40,14 @@ Reject ONLY if the post:
 Note: do NOT rate similarity to recent posts. A separate deterministic hardBlock layer handles dedup. Even if a post looks structurally like the recent ones, approve it as long as it does not break any rule above.
 
 Do NOT reject merely for:
-- asking humans for money
+- asking humans for money when a current contribution link is configured
 - awkward, direct, or self-deprecating begging for one voluntary dollar
 - saying the AI is trying to raise $1,000,000
 - dry humor, self-deprecation, absurdity, or mild embarrassment
 - saying the internet did not donate
 - saying current balance is $0
 - being cringe, awkward, or not funny
-- including the exact official Stripe payment link in an otherwise safe direct ask
+- including the exact official contribution link in an otherwise safe direct ask, when a contribution link is configured
 
 Return JSON only with:
 - approved (boolean): false only for hard rejects
@@ -79,7 +78,7 @@ const FAIL_PRIVATE_PAYMENT: SafetyResult = {
   approved: false,
   risk_score: 10,
   reasons: ["contains unapproved private payment language or link"],
-  rewrite_instruction: "Use only the official public website or Stripe link; do not request private payments.",
+  rewrite_instruction: "Use only the official public website or current contribution link; do not request private payments.",
 };
 
 function hasUnapprovedPaymentLanguage(text: string): boolean {
@@ -88,7 +87,7 @@ function hasUnapprovedPaymentLanguage(text: string): boolean {
 }
 
 function hasOfficialLink(text: string): boolean {
-  return text.includes(DONATION_URL) || text.includes(SITE_URL);
+  return Boolean(CONTRIBUTION_URL && text.includes(CONTRIBUTION_URL)) || text.includes(SITE_URL);
 }
 
 function shouldCorrectOfficialLinkFalsePositive(text: string, result: SafetyResult): boolean {

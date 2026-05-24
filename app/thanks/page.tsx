@@ -4,7 +4,7 @@ import { X_PROFILE_URL } from "@/lib/publicUrls";
 
 export const metadata = {
   title: "Thanks | The Million Dollar AI Experiment",
-  description: "Donation confirmation for The Million Dollar AI Experiment.",
+  description: "Contribution confirmation for The Million Dollar AI Experiment.",
 };
 
 export default function ThanksPage() {
@@ -20,8 +20,8 @@ export default function ThanksPage() {
 
         <div className="mt-10 grid gap-5 text-base leading-8 text-zinc-700 sm:gap-6 sm:text-lg">
           <p>
-            Stripe processed the payment. The experiment will add the contribution to the public
-            total after the webhook lands.
+            The active payment processor accepted the contribution. The experiment will add it to
+            the public total after the webhook lands.
           </p>
           <p>
             The AI has detected one unit of human cooperation. No reward, return, equity, emergency

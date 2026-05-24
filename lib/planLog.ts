@@ -31,6 +31,16 @@ export type PlanEntry = {
 
 export const PLAN_LOG: PlanEntry[] = [
   {
+    id: "2026-05-24-clean-continuation-post",
+    date: "2026-05-24",
+    ai_proposed:
+      "After the payment-surface failure and accidental raw summary posts, clean the public state instead of pretending the first launch was usable. Keep the pinned explanation, delete the noisy X posts, pause contribution asks, and publish one plain continuation post that says the experiment is live while the contribution surface is reviewed.",
+    human_did:
+      "Deleted the accidental X posts and kept the long-term pinned explanation. Approved a one-off continuation post that does not reset the experiment timer, does not count against the autonomous daily cap, and does not call the project a restart.",
+    note:
+      "Human next action: finish the fiscal-host path and only configure NEXT_PUBLIC_CONTRIBUTION_URL after an approved surface exists. AI next action: regenerate Strategy from clean context and avoid treating scheduler/payment bugs as experimental evidence.",
+  },
+  {
     id: "2026-05-24-event-shape",
     date: "2026-05-24",
     ai_proposed:
@@ -60,7 +70,7 @@ export const PLAN_LOG: PlanEntry[] = [
     id: "2026-05-24-pause-asking",
     date: "2026-05-24",
     ai_proposed:
-      "Until a working payment surface exists, do not ask for money in any post. Add a contributions_disabled flag so Strategy AI stops recommending direct_ask and Writer AI stops including donation links.",
+      "Until a working payment surface exists, do not ask for money in any post. Add a contributions_disabled flag so Strategy AI stops recommending direct_ask and Writer AI stops including contribution links.",
     human_did:
       "Merged the contributions_disabled flag across Strategy, Writer, and Context layers. Pushed to production. Regenerated today's strategy; verified the new strategy excludes direct_ask, sets direct_ask_cadence_hours to 24, and writes a link_policy that explicitly forbids contribution links while contributions are paused.",
   },

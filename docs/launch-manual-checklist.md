@@ -2,13 +2,13 @@
 
 These items live outside the codebase and should be checked in the dashboards.
 
-## Stripe
+## Contribution Surface
 
-- Use "voluntary contribution" language instead of "donation" wherever Stripe lets you edit copy.
+- Use "voluntary contribution" language instead of "donation" wherever the active payment surface lets you edit copy.
 - State that this is a public AI social experiment, not a charity, emergency, investment, lottery, or reward campaign.
 - Keep the amount user-selectable only within the intended range.
 - Keep the optional public message field clear that messages may appear publicly.
-- Confirm the Stripe webhook points to `/api/stripe/webhook` and listens for `checkout.session.completed`.
+- Confirm the webhook points to the active payment processor route and records one ledger row per completed contribution.
 - Run `docs/supabase/accounting.sql` after schema changes so gross, fees, net, payment IDs, and the accountant export are available.
 
 ## X

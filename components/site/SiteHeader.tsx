@@ -27,7 +27,7 @@ export function SiteHeader() {
             Plan
           </Link>
           {/* Contribute CTA paused while we evaluate Open Source Collective.
-              Re-enable by restoring the anchor below pointing at DONATION_URL. */}
+              Re-enable only after CONTRIBUTION_URL points at an approved surface. */}
           <a
             className="inline-flex h-9 items-center rounded-full bg-zinc-950 px-4 text-zinc-50 shadow-sm transition hover:bg-zinc-800"
             href={X_PROFILE_URL}

@@ -5,7 +5,7 @@
 --
 -- When this flag is true:
 --   - Writer AI will not write direct_ask posts and will not include the
---     donation link in any post.
+--     contribution link in any post.
 --   - Strategy AI will not recommend direct_ask and will set
 --     direct_ask_cadence_hours to its maximum.
 --   - The homepage shows a one-line "contributions temporarily paused"
@@ -13,7 +13,7 @@
 --
 -- The flag defaults to TRUE in code so that a missing field is safe.
 
--- DISABLE contributions (Stripe restricted, payment processor not ready, etc.)
+-- DISABLE contributions (payment processor restricted, fiscal host not ready, etc.)
 update settings
 set value = coalesce(value, '{}'::jsonb) || jsonb_build_object('contributions_disabled', true)
 where key = 'project';

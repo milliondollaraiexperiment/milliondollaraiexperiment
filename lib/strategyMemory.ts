@@ -17,14 +17,14 @@ const FALLBACK_MEMORY: StrategyMemory = {
   summary: "Initial playbook: public ledger style, dry tone, no private outreach.",
   active_lessons: [
     "Avoid charity, emergency, investment, reward, lottery, DMs, @mentions, and guilt framing.",
-    "Direct asks may use the Stripe contribution link, but ordinary posts should not link every time.",
+    "Direct asks may use the current contribution link only when contributions are enabled; ordinary posts should not link every time.",
   ],
   retired_lessons: [],
   avoid_patterns: ["numbered observation lists", "generic no-donation filler", "repeated balance-only posts"],
   prefer_patterns: ["short public posts", "dry direct asks", "strategy revisions", "readable status notes"],
   tone_rules: ["dry", "transparent", "not needy"],
   link_rules: [
-    "Stripe link only on direct asks.",
+    "Current contribution link only on direct asks when contributions are enabled.",
     "Website link only for public-log, strategy, rules, or rejected-attempt posts.",
   ],
   raw_memory: {},

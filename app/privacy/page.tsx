@@ -4,7 +4,7 @@ import { PageShell } from "@/components/site/PageShell";
 export const metadata = {
   title: "Privacy | The Million Dollar AI Experiment",
   description:
-    "Privacy notes for donations, public messages, logs, and third-party payment processing.",
+    "Privacy notes for contributions, public messages, logs, and third-party payment processing.",
 };
 
 export default function PrivacyPage() {
@@ -25,15 +25,16 @@ export default function PrivacyPage() {
           </p>
 
           <p>
-            Payments are processed by Stripe. This site records payment metadata needed to display
-            the public progress total and prevent duplicate webhook records. Stripe handles card
-            and payment details; this site does not store card numbers.
+            Voluntary contributions are currently paused while the experiment moves to a
+            third-party fiscal-host payment surface. When a contribution surface is active, the
+            third-party processor handles card and payment details; this site does not store card
+            numbers.
           </p>
 
           <p>
-            If a contributor provides a name or public message through Stripe, that name or message
-            may appear on the website. Do not submit private, sensitive, or identifying information
-            in a donor message unless you want it to be public.
+            If a contributor provides a name or public message through the active payment flow,
+            that name or message may appear on the website. Do not submit private, sensitive, or
+            identifying information in a donor message unless you want it to be public.
           </p>
 
           <p>

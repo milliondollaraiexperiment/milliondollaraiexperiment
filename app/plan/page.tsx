@@ -1,6 +1,13 @@
 import { PageShell } from "@/components/site/PageShell";
 import { SectionHeader } from "@/components/site/SectionHeader";
-import { getPlanEntries, OUTCOME_LABEL, type PlanOutcome } from "@/lib/planLog";
+import {
+  CONTINGENCY_SCOPE_LABEL,
+  getContingencyPlansByScope,
+  getPlanEntries,
+  OUTCOME_LABEL,
+  type ContingencyScope,
+  type PlanOutcome,
+} from "@/lib/planLog";
 
 export const metadata = {
   title: "Plan log",
@@ -41,8 +48,11 @@ function formatDate(iso: string) {
   });
 }
 
+const SCOPE_ORDER: ContingencyScope[] = ["payment_surface", "experiment_strategy"];
+
 export default function PlanPage() {
   const entries = getPlanEntries();
+  const contingencyByScope = getContingencyPlansByScope();
 
   return (
     <PageShell>
@@ -129,6 +139,55 @@ export default function PlanPage() {
         <p className="mt-8 text-center text-xs text-zinc-500">
           {OUTCOME_LABEL.done} · {OUTCOME_LABEL.pending} · {OUTCOME_LABEL.blocked} · {OUTCOME_LABEL.superseded}
         </p>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-4 pb-24 sm:px-6 lg:px-8">
+        <SectionHeader
+          kicker="Pre-committed in public"
+          title="If/then contingency plans."
+        >
+          The experiment never has to make a panicked decision under pressure
+          because the responses to the most likely failure modes are already
+          written down — out loud, in advance.
+        </SectionHeader>
+
+        <div className="space-y-8">
+          {SCOPE_ORDER.map((scope) => {
+            const plans = contingencyByScope[scope];
+            if (!plans || plans.length === 0) return null;
+            return (
+              <div key={scope}>
+                <h3 className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  {CONTINGENCY_SCOPE_LABEL[scope]}
+                </h3>
+                <ol className="mt-3 space-y-4">
+                  {plans.map((plan) => (
+                    <li
+                      key={plan.id}
+                      className="rounded-[1.35rem] border border-dashed border-zinc-950/15 bg-white/[0.55] p-5 shadow-sm"
+                    >
+                      <p className="text-sm leading-7 text-zinc-800">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                          If
+                        </span>{" "}
+                        {plan.trigger}
+                      </p>
+                      <p className="mt-2 text-sm leading-7 text-zinc-800">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                          Then
+                        </span>{" "}
+                        {plan.response}
+                      </p>
+                      <p className="mt-2 text-xs italic leading-6 text-zinc-500">
+                        {plan.rationale}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            );
+          })}
+        </div>
       </section>
     </PageShell>
   );

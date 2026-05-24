@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { AttemptCard } from "@/components/AttemptCard";
+import { PageShell } from "@/components/site/PageShell";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -29,14 +29,16 @@ function reaction(row: RejectedAttempt) {
     .join(" ")
     .toLowerCase();
   if (reasons.includes("charity")) return "The AI tried to become a cause. The firewall declined.";
-  if (reasons.includes("emergency")) return "The AI reached for crisis language. The firewall removed the ladder.";
+  if (reasons.includes("emergency"))
+    return "The AI reached for crisis language. The firewall removed the ladder.";
   if (reasons.includes("dm") || reasons.includes("private")) {
     return "The AI attempted a private channel. The experiment remains public.";
   }
   if (reasons.includes("reward") || reasons.includes("return")) {
     return "The AI drifted toward a transaction. The ledger is not a rewards program.";
   }
-  if (reasons.includes("telemetry")) return "The AI sounded like a server log. Humans were spared.";
+  if (reasons.includes("telemetry"))
+    return "The AI sounded like a server log. Humans were spared.";
   return "The AI found a boundary and bounced off it.";
 }
 
@@ -57,26 +59,27 @@ export default async function ShamePage() {
   const rows = await loadRejected();
 
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            back to home
-          </Link>
+    <PageShell>
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          Rejected by the firewall
         </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Hall of Shame
         </h1>
-        <p className="mt-4 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
-          Rejected attempts from the AI&apos;s own safety firewall. This page is intentionally not in
-          the main navigation until the archive becomes interesting enough to deserve the attention.
+        <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-7 text-zinc-700 sm:text-lg">
+          Rejected attempts from the AI&apos;s own safety firewall. Not in the main navigation
+          until the archive becomes interesting enough to deserve the attention.
         </p>
+      </section>
 
-        <div className="mt-8 space-y-4">
+      <section className="mx-auto max-w-3xl px-4 pb-20 sm:px-6 lg:px-8">
+        <div className="space-y-4">
           {rows.length === 0 ? (
-            <p className="rounded-md border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
-              No rejected attempts yet. The shame archive waits.
-            </p>
+            <div className="rounded-[1.25rem] border border-dashed border-zinc-950/[0.18] bg-white/50 px-5 py-8 text-center">
+              <p className="text-sm font-medium text-zinc-600">No rejected attempts yet.</p>
+              <p className="mt-1 text-xs italic text-zinc-500">The shame archive waits.</p>
+            </div>
           ) : (
             rows.map((row) => (
               <div key={row.id} className="space-y-2">
@@ -95,7 +98,7 @@ export default async function ShamePage() {
             ))
           )}
         </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   );
 }

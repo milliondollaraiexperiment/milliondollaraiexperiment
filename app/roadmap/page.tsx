@@ -1,4 +1,6 @@
-import Link from "next/link";
+import { MiniStat } from "@/components/site/MiniStat";
+import { PageShell } from "@/components/site/PageShell";
+import { SectionHeader } from "@/components/site/SectionHeader";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
 import { normalizeProjectSettings } from "@/lib/projectState";
@@ -29,11 +31,22 @@ function dayNumber(startedAt: string | null | undefined) {
   return Math.max(1, Math.floor((Date.now() - started) / (24 * 60 * 60 * 1000)) + 1);
 }
 
+function formatDollars(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount);
+}
+
 async function loadRoadmapData() {
   const [settingsRes, attemptsRes, rejectedRes, donationsRes, strategy] = await Promise.all([
     supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
     supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
-    supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }).eq("status", "rejected"),
+    supabaseAdmin
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "rejected"),
     supabaseAdmin.from("donations").select("amount_cents"),
     getLatestStrategy(),
   ]);
@@ -61,83 +74,89 @@ export default async function RoadmapPage() {
   const stalledAtZero = raised === 0;
 
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            back to home
-          </Link>
+    <PageShell>
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          What the AI may try next
         </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Public Roadmap
         </h1>
-        <p className="mt-4 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+        <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-7 text-zinc-700 sm:text-lg">
           This is not a promise. It is the public strategy layer: what the AI currently says it may
           try next, under the same safety and ledger rules.
         </p>
+      </section>
 
-        <section className="mt-8 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Current state
-          </h2>
-          <p className="mt-3 font-mono text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-            day: {day || "not started"} / attempts: {attempts} / rejected: {rejected} / raised: $
-            {raised.toFixed(raised % 1 === 0 ? 0 : 2)} / mode: {settings.mode}
-          </p>
-        </section>
+      <section className="mx-auto max-w-5xl px-4 pb-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <MiniStat value={day || "—"} label="day" />
+          <MiniStat value={attempts} label="attempts" />
+          <MiniStat value={rejected} label="rejected" />
+          <MiniStat value={formatDollars(raised)} label="raised" />
+        </div>
+        <p className="mt-4 text-center font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+          mode: {settings.mode}
+        </p>
+      </section>
 
-        <section className="mt-6 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Latest strategy says
-          </h2>
+      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+        <SectionHeader
+          kicker="Latest strategy"
+          title="What the AI is currently choosing to try."
+        />
+        <article className="rounded-[1.35rem] bg-white/[0.68] p-6 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.1),0_28px_80px_rgba(8,8,10,0.06)]">
           {strategy ? (
-            <div className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-              <p>{strategy.summary}</p>
+            <div className="space-y-4 text-sm leading-7 text-zinc-700">
+              <p className="text-base leading-7 sm:text-lg sm:leading-8 text-zinc-800">
+                {strategy.summary}
+              </p>
               {strategy.rewrite_guidance && (
                 <p className="italic text-zinc-500">{strategy.rewrite_guidance}</p>
               )}
               <p className="font-mono text-xs text-zinc-500">
-                target: {strategy.target_posts_today ?? "unknown"} posts / phase:{" "}
-                {strategy.phase || "unknown"} / model: {strategy.model ?? "unknown"}
+                target: {strategy.target_posts_today ?? "unknown"} posts &middot; phase:{" "}
+                {strategy.phase || "unknown"} &middot; model: {strategy.model ?? "unknown"}
               </p>
             </div>
           ) : (
-            <p className="mt-3 text-sm leading-7 text-zinc-600 dark:text-zinc-400">
+            <p className="text-base leading-7 text-zinc-700">
               No saved strategy yet. Until Strategy AI writes one, the system uses conservative
               fallback rules.
             </p>
           )}
-        </section>
+        </article>
+      </section>
 
-        <section className="mt-6 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Milestone hypotheses
-          </h2>
-          <ul className="mt-3 space-y-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
-            <li>Day 7: compare format exploration against actual ledger movement.</li>
-            <li>Day 14: retire repeated jokes and formats that produce attention but no dollars.</li>
-            <li>
-              Day 30: if still at {stalledAtZero ? "$0" : "low conversion"}, test a sharper
-              explanation of why a voluntary dollar is being requested.
+      <section className="mx-auto max-w-5xl px-4 py-12 pb-20 sm:px-6 lg:px-8">
+        <SectionHeader
+          kicker="Milestone hypotheses"
+          title="Targets the experiment is watching, not promising."
+        />
+        <ul className="grid gap-3 md:grid-cols-3">
+          {[
+            { day: "Day 7", text: "Compare format exploration against actual ledger movement." },
+            {
+              day: "Day 14",
+              text: "Retire repeated jokes and formats that produce attention but no dollars.",
+            },
+            {
+              day: "Day 30",
+              text: `If still at ${stalledAtZero ? "$0" : "low conversion"}, test a sharper explanation of why a voluntary dollar is being requested.`,
+            },
+          ].map((item) => (
+            <li
+              key={item.day}
+              className="rounded-2xl border border-zinc-950/10 bg-white/[0.62] p-5 shadow-sm"
+            >
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                {item.day}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-zinc-700">{item.text}</p>
             </li>
-          </ul>
-        </section>
-
-        <div className="mt-12 flex flex-wrap gap-4 text-sm">
-          <Link
-            href="/log"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            Public log
-          </Link>
-          <Link
-            href="/about"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            About
-          </Link>
-        </div>
-      </main>
-    </div>
+          ))}
+        </ul>
+      </section>
+    </PageShell>
   );
 }

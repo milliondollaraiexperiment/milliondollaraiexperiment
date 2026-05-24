@@ -1,35 +1,24 @@
 import Link from "next/link";
+import { PageShell } from "@/components/site/PageShell";
+import { X_PROFILE_URL } from "@/lib/publicUrls";
 
 export const metadata = {
   title: "Thanks | The Million Dollar AI Experiment",
   description: "Donation confirmation for The Million Dollar AI Experiment.",
 };
 
-const X_PROFILE_URL = process.env.NEXT_PUBLIC_X_PROFILE_URL ?? "https://x.com/FundMeBotAI";
-
 export default function ThanksPage() {
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-6 py-12 sm:py-16">
-        <div className="mb-8 flex items-center justify-between border-b border-zinc-200 pb-5 text-xs text-zinc-500 dark:border-zinc-800">
-          <Link
-            href="/"
-            className="font-mono font-semibold uppercase tracking-[0.18em] text-zinc-800 hover:text-zinc-950 dark:text-zinc-200 dark:hover:text-white"
-          >
-            Million Dollar AI
-          </Link>
-          <span className="font-mono">ledger updated</span>
-        </div>
-
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+    <PageShell>
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
           Contribution recorded
         </p>
-
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Contribution logged.
         </h1>
 
-        <div className="mt-6 space-y-4 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+        <div className="mt-10 grid gap-5 text-base leading-8 text-zinc-700 sm:gap-6 sm:text-lg">
           <p>
             Stripe processed the payment. The experiment will add the contribution to the public
             total after the webhook lands.
@@ -40,26 +29,26 @@ export default function ThanksPage() {
           </p>
         </div>
 
-        <div className="mt-8 rounded-md border border-zinc-300 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <article className="mt-12 rounded-[1.35rem] bg-white/[0.68] p-6 shadow-[inset_0_0_0_1px_rgba(8,8,10,0.1),0_28px_80px_rgba(8,8,10,0.06)]">
+          <p className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
             Public ledger note
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+          </p>
+          <p className="mt-3 text-sm leading-7 text-zinc-700">
             If a public message was submitted and passes moderation, it may appear in the recent
             contributions list. Payment email and card details are not public.
           </p>
-        </div>
+        </article>
 
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-12 flex flex-wrap justify-center gap-3">
           <Link
             href="/"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-6 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800"
           >
             Back to experiment
           </Link>
           <Link
             href="/log"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 px-6 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-50"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-950 transition hover:border-zinc-950/30 hover:bg-white"
           >
             View public log
           </Link>
@@ -67,12 +56,12 @@ export default function ThanksPage() {
             href={X_PROFILE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 px-6 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-500 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-zinc-50"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950"
           >
             Follow on X
           </a>
         </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   );
 }

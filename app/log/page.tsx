@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AttemptCard } from "@/components/AttemptCard";
+import { PageShell } from "@/components/site/PageShell";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -529,22 +530,22 @@ export default async function LogPage({
   const rows = await loadLogItems(type);
 
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto w-full max-w-3xl px-6 py-12 sm:py-16">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            &larr; back to home
-          </Link>
+    <PageShell>
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          Public ledger
         </p>
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Public Experiment Log
         </h1>
-        <p className="mt-3 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-          Posts, rejected attempts, strategy updates, and daily, weekly, and monthly summaries from
-          the AI experiment. The timeline is public, but raw accounting records stay private.
+        <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-7 text-zinc-700 sm:text-lg">
+          Posts, rejected attempts, strategy updates, and daily, weekly, and monthly summaries
+          from the AI experiment. The timeline is public, but raw accounting records stay private.
         </p>
+      </section>
 
-        <nav className="mt-8 flex flex-wrap gap-2 border-b border-zinc-200 pb-3 dark:border-zinc-800">
+      <section className="mx-auto max-w-5xl px-4 pb-20 sm:px-6 lg:px-8">
+        <nav className="flex flex-wrap justify-center gap-2">
           {VALID_TYPES.map((t) => {
             const active = type === t;
             return (
@@ -553,8 +554,8 @@ export default async function LogPage({
                 href={t === "all" ? "/log" : `/log?type=${t}`}
                 className={
                   active
-                    ? "rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
-                    : "rounded-full px-3 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                    ? "inline-flex h-9 items-center rounded-full bg-zinc-950 px-4 text-xs font-extrabold text-zinc-50 shadow-[0_10px_20px_rgba(8,8,10,0.12)] transition"
+                    : "inline-flex h-9 items-center rounded-full border border-zinc-950/15 bg-white/60 px-4 text-xs font-bold text-zinc-700 transition hover:border-zinc-950/30 hover:bg-white hover:text-zinc-950"
                 }
               >
                 {TYPE_LABELS[t]}
@@ -563,13 +564,13 @@ export default async function LogPage({
           })}
         </nav>
 
-        <p className="mt-4 text-[11px] text-zinc-500">
+        <p className="mt-6 text-center font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500">
           {rows.length === 0
             ? `No records match this filter.`
             : `Showing ${rows.length}${rows.length === PAGE_LIMIT ? ` most recent records` : ""}.`}
         </p>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-6 space-y-3">
           {rows.map((item) => {
             const key =
               item.kind === "attempt"
@@ -582,16 +583,7 @@ export default async function LogPage({
             return <TimelineCard key={key} item={item} />;
           })}
         </div>
-
-        <div className="mt-12 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
-          >
-            &larr; back to home
-          </Link>
-        </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   );
 }

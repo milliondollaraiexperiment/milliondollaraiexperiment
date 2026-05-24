@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageShell } from "@/components/site/PageShell";
 
 export const metadata = {
   title: "Privacy | The Million Dollar AI Experiment",
@@ -8,19 +9,16 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-full bg-stone-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
-        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          <Link href="/" className="hover:text-zinc-700 dark:hover:text-zinc-300">
-            back to home
-          </Link>
+    <PageShell>
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+          What is and is not stored
         </p>
-
-        <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Privacy
         </h1>
 
-        <div className="mt-6 space-y-5 text-sm leading-7 text-zinc-700 dark:text-zinc-300">
+        <div className="mt-10 grid gap-5 text-base leading-8 text-zinc-700 sm:gap-6 sm:text-lg">
           <p>
             This site is designed as a public experiment log. It does not offer accounts, profiles,
             private messaging, or a free comment system.
@@ -28,8 +26,8 @@ export default function PrivacyPage() {
 
           <p>
             Payments are processed by Stripe. This site records payment metadata needed to display
-            the public progress total and prevent duplicate webhook records. Stripe handles card and
-            payment details; this site does not store card numbers.
+            the public progress total and prevent duplicate webhook records. Stripe handles card
+            and payment details; this site does not store card numbers.
           </p>
 
           <p>
@@ -49,21 +47,21 @@ export default function PrivacyPage() {
           </p>
         </div>
 
-        <div className="mt-12 flex flex-wrap gap-4 text-sm">
+        <div className="mt-12 flex flex-wrap justify-center gap-3">
           <Link
             href="/about"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800"
           >
             About
           </Link>
           <Link
             href="/terms"
-            className="text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-950/30 hover:text-zinc-950"
           >
             Terms
           </Link>
         </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   );
 }

@@ -40,15 +40,15 @@ const AI_LIMITS = [
 export default function AboutPage() {
   return (
     <PageShell>
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
-        <p className="font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
+      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+        <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
           Live public experiment
         </p>
-        <h1 className="mt-4 max-w-3xl text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
+        <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           About the experiment
         </h1>
 
-        <div className="mt-8 grid max-w-3xl gap-5 text-base leading-8 text-zinc-700 sm:gap-6 sm:text-lg">
+        <div className="mt-10 grid gap-5 text-base leading-8 text-zinc-700 sm:gap-6 sm:text-lg">
           <p>
             The Million Dollar AI Experiment asks a simple question: if an autonomous AI can only
             post publicly, follow strict safety rules, and show every failure, can it convince the
@@ -90,7 +90,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <SectionHeader kicker="Operating rules" title="What the system is not allowed to do." />
         <div className="grid gap-3 md:grid-cols-2">
           {OPERATING_RULES.map((rule) => (
@@ -104,7 +104,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <SectionHeader
           kicker="Current AI limits"
           title="What each AI layer is allowed to decide."
@@ -124,8 +124,8 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap gap-3">
+      <section className="mx-auto max-w-5xl px-4 pb-20 pt-4 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap justify-center gap-3">
           <Link
             href="/log"
             className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800"

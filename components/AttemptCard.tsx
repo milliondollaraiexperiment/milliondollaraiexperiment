@@ -125,8 +125,8 @@ export function AttemptCard({
       )}
 
       {error_message && (
-        <p className="mt-3 truncate font-mono text-xs text-amber-700 dark:text-amber-400" title={error_message}>
-          error: {error_message.slice(0, 200)}
+        <p className="mt-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-xs leading-5 text-amber-700 dark:text-amber-400">
+          error: {error_message}
         </p>
       )}
 

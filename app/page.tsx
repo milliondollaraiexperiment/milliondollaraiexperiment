@@ -79,6 +79,7 @@ async function loadData() {
     postedRes,
     rejectedRes,
     failedRes,
+    lastPostedRes,
     latestStrategy,
     strategyHealth,
     aiHealth,
@@ -124,6 +125,13 @@ async function loadData() {
       .eq("status", "failed")
       .order("created_at", { ascending: false })
       .limit(HOMEPAGE_FAILED_LIMIT),
+    supabaseAdmin
+      .from("attempts")
+      .select("hour_number,created_at")
+      .eq("status", "posted")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     getLatestStrategy(),
     getStrategyHealth(),
     getAiHealthMap(),
@@ -154,6 +162,10 @@ async function loadData() {
     posted: (postedRes.data ?? []) as AttemptRow[],
     rejected: (rejectedRes.data ?? []) as AttemptRow[],
     failed: (failedRes.data ?? []) as AttemptRow[],
+    lastPosted: (lastPostedRes.data ?? null) as {
+      hour_number: number | null;
+      created_at: string;
+    } | null,
     latestStrategy,
     strategyHealth,
     aiHealth,
@@ -311,7 +323,15 @@ function HealthBadge({ status }: { status: string }) {
   );
 }
 
-function SystemStatus({ settings }: { settings: ProjectSettings }) {
+function SystemStatus({
+  settings,
+  lastPosted,
+  aiHealth,
+}: {
+  settings: ProjectSettings;
+  lastPosted: { hour_number: number | null; created_at: string } | null;
+  aiHealth: Record<string, AiHealthRecord | null>;
+}) {
   const paused = isPostingPaused(settings);
   const completed = settings.mode === "completed";
   const label = completed ? "completed" : paused ? "paused" : "live";
@@ -320,6 +340,12 @@ function SystemStatus({ settings }: { settings: ProjectSettings }) {
     : paused
       ? "Autonomous X posting is paused. The public ledger and payment webhook remain online."
       : "Autonomous posting is live. The account is automated and managed by a human operator.";
+
+  const lastPostedLabel = lastPosted
+    ? `${lastPosted.hour_number != null ? `Hour ${lastPosted.hour_number} · ` : ""}${formatPublicTimestamp(lastPosted.created_at)}`
+    : paused
+      ? "paused — none expected"
+      : "no successful post yet";
 
   return (
     <section className="rounded-2xl border border-zinc-950/10 bg-white/[0.62] p-5 shadow-sm">
@@ -330,6 +356,31 @@ function SystemStatus({ settings }: { settings: ProjectSettings }) {
         <HealthBadge status={label} />
       </div>
       <p className="mt-3 text-sm leading-6 text-zinc-600">{copy}</p>
+
+      <dl className="mt-5 grid gap-x-4 gap-y-3 border-t border-zinc-950/10 pt-4 text-xs sm:grid-cols-[max-content_1fr]">
+        <dt className="font-mono uppercase tracking-[0.12em] text-zinc-500">started</dt>
+        <dd className="font-mono text-zinc-700">
+          {settings.started_at ? (
+            <time dateTime={settings.started_at}>{formatPublicTimestamp(settings.started_at)}</time>
+          ) : (
+            "not started"
+          )}
+        </dd>
+
+        <dt className="font-mono uppercase tracking-[0.12em] text-zinc-500">daily cap</dt>
+        <dd className="font-mono text-zinc-700">{settings.daily_post_limit} posts/day</dd>
+
+        <dt className="font-mono uppercase tracking-[0.12em] text-zinc-500">last posted</dt>
+        <dd className="font-mono text-zinc-700">{lastPostedLabel}</dd>
+      </dl>
+
+      <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-950/10 pt-4">
+        {(["writer", "safety", "summary", "strategy"] as const).map((component) => (
+          <Pill key={component} tone={aiHealth[component]?.status === "healthy" ? "green" : "amber"}>
+            {component}: {aiHealth[component]?.status ?? "unknown"}
+          </Pill>
+        ))}
+      </div>
     </section>
   );
 }
@@ -348,11 +399,9 @@ function PillList({ items }: { items: string[] }) {
 function LatestStrategy({
   strategy,
   strategyHealth,
-  aiHealth,
 }: {
   strategy: StrategyRecord | null;
   strategyHealth: StrategyHealthRecord | null;
-  aiHealth: Record<string, AiHealthRecord | null>;
 }) {
   return (
     <section className="rounded-[1.5rem] border border-zinc-950/10 bg-white/[0.68] p-5 shadow-sm sm:p-6">
@@ -415,14 +464,6 @@ function LatestStrategy({
           conservative public posts.
         </p>
       )}
-
-      <div className="mt-5 flex flex-wrap gap-2 border-t border-zinc-950/10 pt-4">
-        {(["writer", "safety", "summary", "strategy"] as const).map((component) => (
-          <Pill key={component} tone={aiHealth[component]?.status === "healthy" ? "green" : "amber"}>
-            {component}: {aiHealth[component]?.status ?? "unknown"}
-          </Pill>
-        ))}
-      </div>
     </section>
   );
 }
@@ -767,6 +808,7 @@ export default async function Home() {
     posted,
     rejected,
     failed,
+    lastPosted,
     latestStrategy,
     strategyHealth,
     aiHealth,
@@ -808,12 +850,8 @@ export default async function Home() {
         )}
 
         <section className="mx-auto grid max-w-7xl gap-6 px-4 py-12 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
-          <SystemStatus settings={settings} />
-          <LatestStrategy
-            strategy={latestStrategy}
-            strategyHealth={strategyHealth}
-            aiHealth={aiHealth}
-          />
+          <SystemStatus settings={settings} lastPosted={lastPosted} aiHealth={aiHealth} />
+          <LatestStrategy strategy={latestStrategy} strategyHealth={strategyHealth} />
         </section>
 
         <WhySection />

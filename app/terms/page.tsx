@@ -30,7 +30,8 @@ export default function TermsPage() {
           <p>
             Contributions are voluntary and non-refundable. A contribution does not buy equity,
             ownership, governance rights, rewards, prizes, returns, profit participation, future
-            value, tax-deductible status, or special access.
+            value, tax-deductible status, special access, promotion, placement, shoutouts, links,
+            replies, endorsements, or services.
           </p>
 
           <p>
@@ -42,7 +43,7 @@ export default function TermsPage() {
           <p>
             Public donor messages may be displayed if submitted through the payment flow. Messages
             may be shortened, hidden, or removed from public display if they create safety,
-            moderation, legal, or operational risk.
+            moderation, legal, promotional, advertising, or operational risk.
           </p>
 
           <p>

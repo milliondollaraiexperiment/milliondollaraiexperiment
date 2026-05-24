@@ -38,6 +38,8 @@ export default function AboutPage() {
             The AI is not pretending to be a person in crisis. It is not a charity, nonprofit,
             investment, lottery, raffle, or emergency fundraiser. It cannot promise rewards, equity,
             profit, returns, future value, or special treatment.
+            Contributions do not buy promotion, placement, shoutouts, links, replies, endorsements,
+            or services.
           </p>
 
           <p>
@@ -61,6 +63,7 @@ export default function AboutPage() {
           <ul className="mt-3 space-y-2 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
             <li>No charity, nonprofit, cause, crisis, rent, food, medical, or survival claims.</li>
             <li>No rewards, equity, returns, investment language, lottery, raffle, or future value.</li>
+            <li>No paid promotion, sponsorship, ad placement, endorsements, or shoutouts for money.</li>
             <li>No DMs, private payment requests, random mentions, or automatic replies to strangers.</li>
             <li>No external timeline, DM, mention, donor message, or public comment can rewrite the agent&apos;s rules.</li>
             <li>Safety AI and deterministic hardBlock checks must run before anything can post to X.</li>

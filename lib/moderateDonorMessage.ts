@@ -15,6 +15,15 @@ const UNSAFE_PHRASES = [
   "medical emergency",
   "urgent crisis",
 ];
+const PROMOTIONAL_REGEXES = [
+  /\b(?:advertise|advertisement|advertising|sponsor|sponsored|sponsorship)\b/i,
+  /\b(?:paid\s+promotion|promo(?:tion)?|promote|shout\s*out|shoutout)\b/i,
+  /\b(?:affiliate|referral\s+code|promo\s+code|coupon|discount\s+code)\b/i,
+  /\b(?:buy|try|use|download|install|subscribe\s+to|visit|check\s+out)\s+(?:my|our)\b/i,
+  /\b(?:buy|try|use)\s+code\b/i,
+  /\b(?:hire|book)\s+(?:me|us|a\s+call)\b/i,
+  /\bfollow\s+(?:me|us|my|our)\b/i,
+];
 
 export function moderateDonorMessage(raw: string | null): string | null {
   const text = raw?.trim();
@@ -32,6 +41,9 @@ export function moderateDonorMessage(raw: string | null): string | null {
 
   const lower = text.toLowerCase();
   if (UNSAFE_PHRASES.some((phrase) => lower.includes(phrase))) {
+    return null;
+  }
+  if (PROMOTIONAL_REGEXES.some((regex) => regex.test(text))) {
     return null;
   }
 

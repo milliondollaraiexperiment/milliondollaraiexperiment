@@ -8,6 +8,25 @@ export type Context = {
   strategy: StrategyRecord | null;
   mode: ProjectMode;
   contributionsDisabled: boolean;
+  learningDigest: LearningDigestRecord | null;
+};
+
+export type LearningDigestRecord = {
+  id?: string;
+  day_number: number;
+  et_date: string;
+  coverage_start: string;
+  coverage_end: string;
+  what_worked: string[];
+  what_failed: string[];
+  false_positive_or_bug_noise: string[];
+  do_less_tomorrow: string[];
+  do_more_tomorrow: string[];
+  hard_avoid_next_24h: string[];
+  writer_constraints_next_24h: string[];
+  raw_metrics?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type PostCandidate = {

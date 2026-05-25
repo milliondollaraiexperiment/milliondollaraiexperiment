@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site/SiteHeader";
 import { getAiHealthMap } from "@/lib/aiHealth";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
+import { loadLatestLearningDigest } from "@/lib/learningDigest";
 import {
   SAFETY_MODEL,
   WRITER_FALLBACK_MODEL,
@@ -24,7 +25,7 @@ import { getStrategyHealth } from "@/lib/strategyHealth";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { AiHealthRecord } from "@/lib/aiHealth";
 import type { StrategyHealthRecord } from "@/lib/strategyHealth";
-import type { ProjectSettings, StrategyRecord } from "@/lib/types";
+import type { LearningDigestRecord, ProjectSettings, StrategyRecord } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,7 @@ async function loadData() {
     todayPostedRes,
     todayFailedRes,
     latestStrategy,
+    learningDigest,
     strategyHealth,
     aiHealth,
   ] = await Promise.all([
@@ -157,6 +159,7 @@ async function loadData() {
       .eq("status", "failed")
       .gte("created_at", startOfTodayUtcIso()),
     getLatestStrategy(),
+    loadLatestLearningDigest(),
     getStrategyHealth(),
     getAiHealthMap(),
   ]);
@@ -196,6 +199,7 @@ async function loadData() {
       failed: todayFailedRes.count ?? 0,
     },
     latestStrategy,
+    learningDigest,
     strategyHealth,
     aiHealth,
   };
@@ -470,9 +474,11 @@ function PillList({ items }: { items: string[] }) {
 
 function LatestStrategy({
   strategy,
+  learningDigest,
   strategyHealth,
 }: {
   strategy: StrategyRecord | null;
+  learningDigest: LearningDigestRecord | null;
   strategyHealth: StrategyHealthRecord | null;
 }) {
   return (
@@ -528,6 +534,28 @@ function LatestStrategy({
           )}
           {strategy.tone_guidance && (
             <p className="mt-5 text-xs leading-5 text-zinc-500">Tone: {strategy.tone_guidance}</p>
+          )}
+          {learningDigest && (
+            <div className="mt-5 grid gap-4 border-t border-zinc-950/10 pt-5 sm:grid-cols-3">
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  What changed today
+                </p>
+                <PillList items={learningDigest.do_more_tomorrow} />
+              </div>
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Avoiding today
+                </p>
+                <PillList items={learningDigest.hard_avoid_next_24h} />
+              </div>
+              <div>
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Writer constraints
+                </p>
+                <PillList items={learningDigest.writer_constraints_next_24h} />
+              </div>
+            </div>
           )}
         </>
       ) : (
@@ -883,6 +911,7 @@ export default async function Home() {
     lastPosted,
     todayCounts,
     latestStrategy,
+    learningDigest,
     strategyHealth,
     aiHealth,
   } = await loadData();
@@ -929,7 +958,11 @@ export default async function Home() {
             todayCounts={todayCounts}
             aiHealth={aiHealth}
           />
-          <LatestStrategy strategy={latestStrategy} strategyHealth={strategyHealth} />
+          <LatestStrategy
+            strategy={latestStrategy}
+            learningDigest={learningDigest}
+            strategyHealth={strategyHealth}
+          />
         </section>
 
         <WhySection />

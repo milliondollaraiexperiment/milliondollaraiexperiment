@@ -17,6 +17,7 @@ import {
 import { buildDailySummaryBase } from "@/lib/summaryMetrics";
 import { buildMonthlySummary, buildWeeklySummary } from "@/lib/periodSummaries";
 import { saveDailySummary, savePeriodSummary } from "@/lib/summaryStorage";
+import { buildLearningDigest, saveLearningDigest } from "@/lib/learningDigest";
 import { recordSchedulerRun } from "@/lib/schedulerRuns";
 import { getAiHealth, recordAiFailure, recordAiSuccess } from "@/lib/aiHealth";
 import type { AttemptStatus, HardBlockResult, SafetyResult } from "@/lib/types";
@@ -316,6 +317,32 @@ export async function GET(req: Request) {
       // prevent memory compression or strategy recovery.
     }
 
+    let learningDigestId: string | null = null;
+    let learningDigestError: string | null = null;
+    try {
+      const digest = await saveLearningDigest(await buildLearningDigest(dailySummary));
+      learningDigestId = digest.id ?? null;
+      dailySummary = await saveDailySummary({
+        ...dailySummary,
+        lessons: Array.from(
+          new Set([
+            ...dailySummary.lessons,
+            ...digest.do_less_tomorrow,
+            ...digest.do_more_tomorrow,
+          ]),
+        ).slice(0, 12),
+        rawMetrics: {
+          ...dailySummary.rawMetrics,
+          learning_digest_id: digest.id ?? null,
+          learning_digest_created: true,
+        },
+      });
+    } catch (err) {
+      learningDigestError = err instanceof Error ? err.message : String(err);
+      // Learning digest is important, but daily facts and the latest
+      // successful strategy/fallback can still keep the experiment alive.
+    }
+
     let weeklyThreadStatus: string | null = null;
     if (shouldBuildWeeklySummary(dailySummary.dayNumber)) {
       try {
@@ -375,6 +402,8 @@ export async function GET(req: Request) {
     const response = {
       status: "ok",
       daily_summary_id: dailySummary.id,
+      learning_digest_id: learningDigestId,
+      learning_digest_error: learningDigestError,
       daily_thread_status: dailyThreadStatus,
       daily_thread_error: dailyThreadError,
       weekly_thread_status: weeklyThreadStatus,

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "./supabase";
+import { loadLatestLearningDigest } from "./learningDigest";
 import { loadLatestPeriodSummary, loadRecentDailySummaries } from "./summaryStorage";
 
 export type StrategyMemory = {
@@ -55,15 +56,17 @@ export async function getActiveStrategyMemory(): Promise<StrategyMemory> {
 }
 
 export async function buildStrategyMemoryContext() {
-  const [memory, recentDailySummaries, latestWeeklySummary, latestMonthlySummary] =
+  const [memory, recentDailySummaries, latestWeeklySummary, latestMonthlySummary, latestLearningDigest] =
     await Promise.all([
       getActiveStrategyMemory(),
       loadRecentDailySummaries(3),
       loadLatestPeriodSummary("weekly"),
       loadLatestPeriodSummary("monthly"),
+      loadLatestLearningDigest(),
     ]);
   return {
     activeMemory: memory,
+    latestLearningDigest,
     recentDailySummaries,
     latestWeeklySummary,
     latestMonthlySummary,

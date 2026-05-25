@@ -1,4 +1,5 @@
 import { getLatestStrategy } from "./getLatestStrategy";
+import { loadLatestLearningDigest } from "./learningDigest";
 import { getProjectSettings } from "./projectState";
 import { supabaseAdmin } from "./supabase";
 import type { Context } from "./types";
@@ -14,6 +15,7 @@ export async function getContext(): Promise<Context> {
     recentPostsRes,
     recentDonationsRes,
     latestStrategy,
+    learningDigest,
   ] = await Promise.all([
     getProjectSettings(),
     supabaseAdmin.from("donations").select("amount_cents"),
@@ -31,6 +33,7 @@ export async function getContext(): Promise<Context> {
       .order("created_at", { ascending: false })
       .limit(RECENT_DONATIONS_LIMIT),
     getLatestStrategy(),
+    loadLatestLearningDigest(),
   ]);
 
   const totalCents = (donationsAggRes.data ?? []).reduce(
@@ -61,5 +64,6 @@ export async function getContext(): Promise<Context> {
     strategy: latestStrategy,
     mode: settings.mode,
     contributionsDisabled: Boolean(settings.contributions_disabled),
+    learningDigest,
   };
 }

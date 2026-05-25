@@ -77,6 +77,7 @@ type StrategyRow = {
   phase: string | null;
   tone_guidance: string | null;
   model: string | null;
+  raw_metrics: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -174,7 +175,7 @@ async function loadLogItems(type: LogType) {
     supabaseAdmin
       .from("strategies")
       .select(
-        "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,target_posts_today,posting_windows_utc,min_post_interval_minutes,direct_ask_cadence_hours,keyword_focus,hashtag_policy,link_policy,phase,tone_guidance,model,created_at",
+        "id,summary,preferred_formats,forced_format,banned_angles,rewrite_guidance,top_reject_reasons,target_posts_today,posting_windows_utc,min_post_interval_minutes,direct_ask_cadence_hours,keyword_focus,hashtag_policy,link_policy,phase,tone_guidance,model,raw_metrics,created_at",
       )
       .order("created_at", { ascending: false })
       .limit(PAGE_LIMIT),
@@ -288,11 +289,22 @@ function PillList({ items }: { items: string[] }) {
   );
 }
 
+function strategyLearningDigest(row: StrategyRow) {
+  const raw = row.raw_metrics?.learning_digest;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return raw as {
+    do_more_tomorrow?: string[];
+    hard_avoid_next_24h?: string[];
+    writer_constraints_next_24h?: string[];
+  };
+}
+
 function StrategyCard({ row }: { row: StrategyRow }) {
   const formats = [
     ...(row.forced_format ? [`forced: ${row.forced_format}`] : []),
     ...(row.preferred_formats ?? []).map((format) => `prefer: ${format}`),
   ];
+  const learningDigest = strategyLearningDigest(row);
 
   return (
     <article
@@ -339,6 +351,28 @@ function StrategyCard({ row }: { row: StrategyRow }) {
 
       {row.tone_guidance && (
         <p className="mt-4 text-[11px] leading-5 text-zinc-500">Tone: {row.tone_guidance}</p>
+      )}
+      {learningDigest && (
+        <div className="mt-4 grid gap-3 border-t border-blue-200/70 pt-4 sm:grid-cols-3 dark:border-blue-950">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              What changed today
+            </p>
+            <PillList items={learningDigest.do_more_tomorrow ?? []} />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Avoiding today
+            </p>
+            <PillList items={learningDigest.hard_avoid_next_24h ?? []} />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Writer constraints
+            </p>
+            <PillList items={learningDigest.writer_constraints_next_24h ?? []} />
+          </div>
+        </div>
       )}
       {(row.hashtag_policy || row.link_policy) && (
         <div className="mt-3 space-y-1 text-[11px] leading-5 text-zinc-500">

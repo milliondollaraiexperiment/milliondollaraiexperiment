@@ -12,6 +12,7 @@
 -- What it does (single transaction):
 --   - Purges attempts and daily_runs created on/after started_at.
 --   - Wipes daily_summaries, period_summaries, strategies, strategy_memories.
+--   - Wipes learning_digests if the learning table has been installed.
 --   - Resets strategy_health to a single 'current' row with null timings and
 --     zero counters.
 --   - Resets ai_health rows (writer, safety, summary, strategy) to healthy
@@ -52,6 +53,12 @@ where created_at >= coalesce(
 
 delete from daily_summaries;
 delete from period_summaries;
+do $$
+begin
+  if to_regclass('public.learning_digests') is not null then
+    delete from learning_digests;
+  end if;
+end $$;
 delete from strategies;
 delete from strategy_memories;
 

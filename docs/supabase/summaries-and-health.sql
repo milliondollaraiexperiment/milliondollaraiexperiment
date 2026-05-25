@@ -57,6 +57,27 @@ create table if not exists period_summaries (
 create index if not exists period_summaries_lookup_idx
   on period_summaries (period_type, created_at desc);
 
+create table if not exists learning_digests (
+  id uuid primary key default gen_random_uuid(),
+  day_number int not null unique,
+  et_date text not null,
+  coverage_start timestamptz not null,
+  coverage_end timestamptz not null,
+  what_worked text[] not null default '{}',
+  what_failed text[] not null default '{}',
+  false_positive_or_bug_noise text[] not null default '{}',
+  do_less_tomorrow text[] not null default '{}',
+  do_more_tomorrow text[] not null default '{}',
+  hard_avoid_next_24h text[] not null default '{}',
+  writer_constraints_next_24h text[] not null default '{}',
+  raw_metrics jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists learning_digests_day_number_idx
+  on learning_digests (day_number desc);
+
 create table if not exists strategy_memories (
   id uuid primary key default gen_random_uuid(),
   active boolean not null default true,

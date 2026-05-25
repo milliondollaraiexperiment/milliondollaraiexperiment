@@ -79,6 +79,14 @@ type StrategyRow = {
   model: string | null;
   raw_metrics: Record<string, unknown> | null;
   created_at: string;
+  run_day_number?: number | null;
+  run_et_date?: string | null;
+};
+
+type DailyRunRow = {
+  et_date: string;
+  day_number: number;
+  details: Record<string, unknown> | null;
 };
 
 type DailySummaryRow = {
@@ -164,7 +172,7 @@ function shouldIncludeAttempt(row: AttemptRow, type: LogType) {
 }
 
 async function loadLogItems(type: LogType) {
-  const [attemptsRes, strategiesRes, dailyRes, periodRes] = await Promise.all([
+  const [attemptsRes, strategiesRes, dailyRes, periodRes, dailyRunsRes] = await Promise.all([
     supabaseAdmin
       .from("attempts")
       .select(
@@ -193,15 +201,43 @@ async function loadLogItems(type: LogType) {
       )
       .order("created_at", { ascending: false })
       .limit(PAGE_LIMIT),
+    supabaseAdmin
+      .from("daily_runs")
+      .select("et_date,day_number,details")
+      .order("created_at", { ascending: false })
+      .limit(PAGE_LIMIT),
   ]);
 
   const attempts = ((attemptsRes.data ?? []) as AttemptRow[])
     .filter((row) => shouldIncludeAttempt(row, type))
     .map((row): TimelineItem => ({ kind: "attempt", created_at: row.created_at, data: row }));
 
+  const strategyRunById = new Map<string, DailyRunRow>();
+  ((dailyRunsRes.data ?? []) as DailyRunRow[]).forEach((run) => {
+    const strategyId = run.details?.strategy_id;
+    if (typeof strategyId === "string") {
+      strategyRunById.set(strategyId, run);
+    }
+  });
+
+  const latestStrategyByRunDate = new Map<string, StrategyRow>();
+  ((strategiesRes.data ?? []) as StrategyRow[]).forEach((row) => {
+    const run = strategyRunById.get(row.id);
+    const runDate = run?.et_date ?? row.created_at.slice(0, 10);
+    const decorated = {
+      ...row,
+      run_day_number: run?.day_number ?? null,
+      run_et_date: run?.et_date ?? null,
+    };
+    const existing = latestStrategyByRunDate.get(runDate);
+    if (!existing || new Date(decorated.created_at) > new Date(existing.created_at)) {
+      latestStrategyByRunDate.set(runDate, decorated);
+    }
+  });
+
   const strategies =
     type === "all" || type === "strategies"
-      ? ((strategiesRes.data ?? []) as StrategyRow[]).map(
+      ? Array.from(latestStrategyByRunDate.values()).map(
           (row): TimelineItem => ({ kind: "strategy", created_at: row.created_at, data: row }),
         )
       : [];
@@ -315,9 +351,15 @@ function StrategyCard({ row }: { row: StrategyRow }) {
         <div>
           <p className="font-mono text-[11px] uppercase tracking-wider text-blue-700 dark:text-blue-300">
             Strategy update
+            {row.run_day_number ? ` / Day ${row.run_day_number}` : ""}
           </p>
+          {row.run_et_date && (
+            <p className="mt-1 font-mono text-xs text-blue-700/80 dark:text-blue-300/80">
+              UTC experiment day: {row.run_et_date}
+            </p>
+          )}
           <time dateTime={row.created_at} className="font-mono text-xs text-zinc-500">
-            {formatPublicTimestamp(row.created_at)}
+            Generated {formatPublicTimestamp(row.created_at)}
           </time>
         </div>
         <span className="w-fit rounded bg-blue-100 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-blue-700 dark:bg-blue-950 dark:text-blue-300">

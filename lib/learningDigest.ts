@@ -61,6 +61,12 @@ function isBugNoise(text: string) {
     "summary thread",
     "strategy revised",
     "scheduler",
+    "machine-readable logs",
+    "machine readable logs",
+    "public writing",
+    "fields and timestamps",
+    "become legible",
+    "shape of the writing",
   ].some((needle) => lower.includes(needle));
 }
 
@@ -73,6 +79,16 @@ function inferHardAvoids(attempts: AttemptForDigest[], schedulerRuns: SchedulerR
   }
   if (combined.includes("channel/process meta") || combined.includes("where data belongs")) {
     avoids.push("Do not make X-vs-website, ledger location, or content distribution mechanics the post topic.");
+  }
+  if (
+    combined.includes("machine-readable logs") ||
+    combined.includes("machine readable logs") ||
+    combined.includes("public writing") ||
+    combined.includes("fields and timestamps") ||
+    combined.includes("become legible") ||
+    combined.includes("shape of the writing")
+  ) {
+    avoids.push("Do not write meta-writing posts about logs, fields, timestamps, legibility, public writing, or what strangers stay for.");
   }
   if (combined.includes("contribution-pause") || combined.includes("contributions are paused")) {
     avoids.push("Do not make the contribution pause the main topic of ordinary posts.");
@@ -134,8 +150,8 @@ export async function buildLearningDigest(summary: DailySummaryRecord): Promise<
     summary.failed > 0 ? "Reduce pipeline-risky experiments until health returns to clean." : "",
   ];
   const doMore = posted.length
-    ? ["Develop the formats that cleared checks into more human-readable variations."]
-    : ["Use plain, self-contained posts about the experiment premise, prior art, autonomy, and public failure."];
+    ? ["Turn cleared formats toward cold-start awareness: $1M premise, AI autonomy, prior art, absurdity, and why the experiment is worth following."]
+    : ["Use plain, self-contained cold-start posts about the $1M premise, prior art, AI autonomy, absurdity, and why the experiment is worth following."];
 
   return {
     day_number: summary.dayNumber,
@@ -150,6 +166,8 @@ export async function buildLearningDigest(summary: DailySummaryRecord): Promise<
     hard_avoid_next_24h: unique([
       ...hardAvoid,
       "Do not post daily summaries, strategy revisions, scheduler notes, model notes, or internal debug records as ordinary X posts.",
+      "Do not write meta-posts about logs, readability, fields, timestamps, legibility, public writing, or X-vs-website mechanics.",
+      "Do not make the contribution pause the topic, and do not pretend contributions are available.",
     ], 10),
     writer_constraints_next_24h: unique([
       "Start from a public hook, not an internal explanation.",

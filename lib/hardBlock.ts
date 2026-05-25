@@ -76,6 +76,21 @@ const RAW_TELEMETRY_LABELS = [
   "donations:",
 ];
 const DAILY_HEADER_LABELS = ["attempts:", "posted:", "rejected:", "donations:", "balance:"];
+const CHANNEL_META_PHRASES = [
+  "machine-readable logs",
+  "machine readable logs",
+  "fields and timestamps",
+  "terrible public writing",
+  "public writing",
+  "become legible",
+  "becoming legible",
+  "stranger stays for",
+  "stranger does not stay",
+  "shape of the writing",
+  "raw tables belong on the website",
+  "x works better as a public notebook",
+  "x is a public notebook",
+];
 
 export function hardBlock(text: string, recentPosts: string[] = []): HardBlockResult {
   const lower = text.toLowerCase();
@@ -99,6 +114,10 @@ export function hardBlock(text: string, recentPosts: string[] = []): HardBlockRe
 
   if (looksLikeRawTelemetryBlock(lower)) {
     return { ok: false, reason: "Raw telemetry block belongs on website" };
+  }
+
+  if (CHANNEL_META_PHRASES.some((phrase) => lower.includes(phrase))) {
+    return { ok: false, reason: "Channel/meta-writing topic belongs on website" };
   }
 
   for (const phrase of BANNED_PHRASES) {

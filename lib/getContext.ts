@@ -19,12 +19,17 @@ export async function getContext(): Promise<Context> {
   ] = await Promise.all([
     getProjectSettings(),
     supabaseAdmin.from("donations").select("amount_cents"),
-    supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
+    supabaseAdmin
+      .from("attempts")
+      .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null),
     // Include rejected/failed attempts too, so Writer can avoid repeating
-    // text that the safety stack just rejected.
+    // text that the safety stack just rejected. Summary/system records are
+    // intentionally excluded so daily reports cannot steer ordinary X posts.
     supabaseAdmin
       .from("attempts")
       .select("text,post_type")
+      .not("hour_number", "is", null)
       .order("created_at", { ascending: false })
       .limit(RECENT_POSTS_LIMIT),
     supabaseAdmin

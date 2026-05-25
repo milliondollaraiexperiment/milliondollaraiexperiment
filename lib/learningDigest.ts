@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "./supabase";
-import type { DailySummaryRecord } from "./summaryTypes";
+import { SUMMARY_POST_TYPES, type DailySummaryRecord } from "./summaryTypes";
 import type { LearningDigestRecord } from "./types";
 
 type AttemptForDigest = {
@@ -121,10 +121,15 @@ export async function buildLearningDigest(summary: DailySummaryRecord): Promise<
     throw new Error(`buildLearningDigest attempts failed: ${attemptsRes.error.message}`);
   }
   const attempts = (attemptsRes.data ?? []) as AttemptForDigest[];
+  const ordinaryAttempts = attempts.filter(
+    (row) => !SUMMARY_POST_TYPES.has(row.post_type ?? "") && row.post_type !== null,
+  );
   const schedulerRuns = schedulerRes.error ? [] : ((schedulerRes.data ?? []) as SchedulerRunForDigest[]);
-  const posted = attempts.filter((row) => row.status === "posted" || row.status === "logged_only");
-  const rejected = attempts.filter((row) => row.status === "rejected");
-  const failed = attempts.filter((row) => row.status === "failed");
+  const posted = ordinaryAttempts.filter(
+    (row) => row.status === "posted" || row.status === "logged_only",
+  );
+  const rejected = ordinaryAttempts.filter((row) => row.status === "rejected");
+  const failed = ordinaryAttempts.filter((row) => row.status === "failed");
   const bugNoise = [
     ...attempts.flatMap((row) => {
       const text = [row.text, reasonText(row), row.public_strategy_note].filter(Boolean).join(" ");
@@ -135,7 +140,7 @@ export async function buildLearningDigest(summary: DailySummaryRecord): Promise<
       return isBugNoise(text) ? [`${run.job}/${run.source}: ${run.reason ?? run.status}`] : [];
     }),
   ];
-  const hardAvoid = inferHardAvoids(attempts, schedulerRuns);
+  const hardAvoid = inferHardAvoids(ordinaryAttempts, schedulerRuns);
 
   const whatWorked = posted.length
     ? posted.map((row) => `${row.post_type ?? "post"} cleared as ${row.status}`)
@@ -175,7 +180,8 @@ export async function buildLearningDigest(summary: DailySummaryRecord): Promise<
       "If a post explains a lesson, make it about the experiment's stakes, not the pipeline.",
     ], 10),
     raw_metrics: {
-      attempts: attempts.length,
+      attempts: ordinaryAttempts.length,
+      system_attempts: attempts.length - ordinaryAttempts.length,
       posted: posted.length,
       rejected: rejected.length,
       failed: failed.length,

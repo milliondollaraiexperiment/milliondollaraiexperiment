@@ -22,6 +22,7 @@ export async function getGenerationThrottleState(overrideMinutes?: number | null
   const { data, error } = await supabaseAdmin
     .from("attempts")
     .select("created_at")
+    .not("hour_number", "is", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

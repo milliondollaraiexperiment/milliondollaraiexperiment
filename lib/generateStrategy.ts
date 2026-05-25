@@ -423,6 +423,7 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
     supabaseAdmin
       .from("attempts")
       .select("post_type,status,safety_reasons,hard_block_reason,public_strategy_note,created_at")
+      .not("hour_number", "is", null)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(RECENT_ATTEMPT_LIMIT),

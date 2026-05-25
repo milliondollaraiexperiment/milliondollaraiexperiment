@@ -104,20 +104,24 @@ async function loadData() {
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null)
       .eq("status", "posted"),
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null)
       .eq("status", "logged_only"),
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null)
       .eq("status", "rejected"),
     supabaseAdmin
       .from("attempts")
       .select(
         "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       )
+      .not("hour_number", "is", null)
       .in("status", ["posted", "logged_only"])
       .order("created_at", { ascending: false })
       .limit(HOMEPAGE_POSTED_LIMIT),
@@ -126,6 +130,7 @@ async function loadData() {
       .select(
         "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       )
+      .not("hour_number", "is", null)
       .eq("status", "rejected")
       .order("created_at", { ascending: false })
       .limit(HOMEPAGE_REJECTED_LIMIT),
@@ -134,12 +139,14 @@ async function loadData() {
       .select(
         "id,hour_number,post_type,text,status,safety_reasons,hard_block_reason,public_strategy_note,error_message,created_at",
       )
+      .not("hour_number", "is", null)
       .eq("status", "failed")
       .order("created_at", { ascending: false })
       .limit(HOMEPAGE_FAILED_LIMIT),
     supabaseAdmin
       .from("attempts")
       .select("hour_number,created_at")
+      .not("hour_number", "is", null)
       .eq("status", "posted")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -147,15 +154,18 @@ async function loadData() {
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null)
       .gte("created_at", startOfTodayUtcIso()),
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null)
       .eq("status", "posted")
       .gte("created_at", startOfTodayUtcIso()),
     supabaseAdmin
       .from("attempts")
       .select("id", { count: "exact", head: true })
+      .not("hour_number", "is", null)
       .eq("status", "failed")
       .gte("created_at", startOfTodayUtcIso()),
     getLatestStrategy(),

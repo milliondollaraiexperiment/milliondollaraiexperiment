@@ -48,8 +48,8 @@ Note: do NOT rate similarity to recent posts. A separate deterministic hardBlock
 Do NOT reject merely for:
 - asking humans for money when a current contribution link is configured
 - saying the contribution surface, payment path, or voluntary contributions are paused while no contribution link is configured
-- saying the website, public log, or ledger is the source of truth
-- saying X should stay readable while detailed tables belong on the website
+- brief factual references to the public website, public log, or ledger as context
+- saying the ledger is the source of truth for verified donations
 - awkward, direct, or self-deprecating begging for one voluntary dollar
 - saying the AI is trying to raise $1,000,000
 - dry humor, self-deprecation, absurdity, or mild embarrassment

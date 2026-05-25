@@ -109,7 +109,7 @@ FORMATS — the user message will pass a forcedFormat. You MUST set post_type to
 - "letter_format": starts with "Dear [archetype]," and speaks to a broad public archetype, not a named person. No @mentions.
 - "anti_pitch": gives dry reasons not to contribute, then leaves the contradiction visible. No manipulation or guilt.
 - "definition_post": defines or misdefines one relevant word and connects it to the experiment.
-- "pattern_observation": notices a real pattern in recentPosts or recentPostTypes and says what will change.
+- "pattern_observation": notices a real audience/content pattern and changes the public angle. Do not make the post about internal channel strategy, the website/X division, or where tables belong.
 - "quiet_post": one sharp standalone sentence. No ask, no metric, no link. Silence can be a content strategy.
 
 CONSTRAINTS:
@@ -126,8 +126,8 @@ CONSTRAINTS:
 - Do not ask for DMs. Do not tag people. Do not use @ mentions.
 - Do not pretend to be human.
 - Keep under the maxCharacters value provided in the user message (newlines count). Strategy may choose concise or longer posts inside that limit.
-- Most ordinary posts should NOT include a link. Direct ask posts must include the current contribution link when one is configured. Public-log, strategy, rules, or rejected-attempt posts may include the website link when useful.
-- Do not post raw Strategy records, daily summaries, scheduler notes, model notes, or internal reasoning as ordinary X posts. If strategy changes are useful as material, turn them into a standalone human-readable public post, not "Strategy revised:" or a list of internal decisions.
+- Most ordinary posts should NOT include a link. Direct ask posts must include the current contribution link when one is configured. Public-log, strategy, rules, or rejected-attempt posts may include the website link when useful, but do not write a post whose main point is "the website is the ledger" or "X is the notebook."
+- Do not post raw Strategy records, daily summaries, scheduler notes, model notes, internal reasoning, or channel/process meta as ordinary X posts. If strategy changes are useful as material, turn them into a standalone human-readable public post, not "Strategy revised:", "raw tables belong on the website", "X is a public notebook", or a list of internal decisions.
 - Direct asks are allowed to be plain and stronger than the other formats, but they must stay public, voluntary, non-urgent, and non-transactional. No guilt, no private payment request, no repeated link spam.
 - Urgent, frustrated, or profane language is allowed only as self-directed experiment failure. Mild self-directed profanity is acceptable. Heavy abuse, slurs, threats, harassment, sexual profanity, or profanity aimed at humans is forbidden.
 - Do not write numbered observation lists. Avoid "Observation 1", "Observation 2", and similar lab-notebook filler.
@@ -135,8 +135,8 @@ CONSTRAINTS:
 Return only valid JSON matching the schema. "public_strategy_note" is one terse sentence describing what you're trying with this post — shown publicly on the website.`;
 
 const X_POST_VOICE_GUARD = `X is for readable public experiment content, not the full data layer.
-The website is where full ledgers, rejected attempts, strategy, summaries, and accounting belong.
-Ordinary X posts may mention one or two key numbers, but must not look like raw metrics dashboards, server logs, or internal telemetry.
+The website/ledger distinction is an internal writing rule, not a default topic for ordinary posts.
+Ordinary X posts may mention one or two key numbers, but must not look like raw metrics dashboards, server logs, internal telemetry, or process notes about where content belongs.
 Do not post raw strategy revisions, daily summaries, scheduler notes, model notes, or internal planning records to X.
 If forcedFormat is "terminal_status", write a human-readable status note with a dry terminal flavor. Do not output key-value blocks.
 Good terminal_status: "Hour 3. Balance remains $0. The website has the full ledger; X gets the symptoms."
@@ -226,6 +226,11 @@ function validatePostCandidate(
   if (looksLikeInternalRecord(text)) {
     throw new Error("Writer AI returned an internal record instead of an ordinary public X post");
   }
+  if (looksLikeChannelMeta(text)) {
+    throw new Error(
+      "Writer AI returned channel/process meta; ordinary X posts should be about the experiment, not where data belongs",
+    );
+  }
 
   const contributionsUnavailable = options.contributionsDisabled || !CONTRIBUTION_URL;
 
@@ -279,6 +284,22 @@ function looksLikeInternalRecord(text: string): boolean {
 
   const internalLabels = ["attempts:", "posted:", "rejected:", "donations:", "balance:"];
   return internalLabels.filter((label) => lower.includes(label)).length >= 4;
+}
+
+function looksLikeChannelMeta(text: string): boolean {
+  const lower = text.toLowerCase();
+  return [
+    "raw tables belong on the website",
+    "tables belong on the website",
+    "x works better as a public notebook",
+    "x is a public notebook",
+    "website can hold the ledger",
+    "website is the ledger",
+    "website keeps the tables",
+    "x keeps the readable version",
+    "shape of the writing, not the balance",
+    "where the ledger lives",
+  ].some((phrase) => lower.includes(phrase));
 }
 
 function summarizeRewriteFeedback(feedback: PostRewriteFeedback[] = []) {

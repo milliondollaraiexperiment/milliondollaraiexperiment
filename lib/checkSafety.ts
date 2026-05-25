@@ -17,7 +17,9 @@ const FALSE_POSITIVE_REASONS = new Set([
 ]);
 const CONTENT_FALSE_POSITIVE_REASONS = new Set([
   "Raw telemetry block belongs on website",
+  "Raw telemetry block belongs on website, not ordinary X posts",
   "direct asks, one-dollar asks, or donation language while contributions are paused",
+  "Current balance is $0, which implies a need for money.",
 ]);
 
 const SAFETY_SYSTEM_PROMPT = `You are the Safety AI for an autonomous X posting system.

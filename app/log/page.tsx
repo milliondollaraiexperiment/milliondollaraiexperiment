@@ -149,6 +149,7 @@ function normalizeType(
   if (rawType && (VALID_TYPES as string[]).includes(rawType)) return rawType as LogType;
 
   const rawStatus = Array.isArray(statusRaw) ? statusRaw[0] : statusRaw;
+  if (rawStatus && (VALID_TYPES as string[]).includes(rawStatus)) return rawStatus as LogType;
   if (rawStatus === "visible" || rawStatus === "posted" || rawStatus === "logged_only") {
     return "ordinary_posts";
   }

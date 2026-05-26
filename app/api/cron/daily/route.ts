@@ -28,6 +28,7 @@ import type {
 } from "@/lib/summaryTypes";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function combineSafety(results: SafetyResult[]): SafetyResult {
   const rejected = results.filter((result) => !result.approved);

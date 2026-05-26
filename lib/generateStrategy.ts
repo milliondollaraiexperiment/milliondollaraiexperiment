@@ -171,6 +171,7 @@ Rules:
 - If rawMetrics.contributions_disabled is TRUE, voluntary contributions are temporarily paused. Do NOT recommend direct_ask as a format, do NOT set forced_format to "direct_ask", set direct_ask_cadence_hours to its maximum (24), and make link_policy reflect that no contribution link should be used. Treat the pause as background context, not the main content theme. Do not recommend repeated posts about the pause; pinned/profile/site copy already explain it.
 - If rawMetrics.contributions_disabled is TRUE, use payment_paused_cold_start framing: no contribution link, no fake payment availability, no money ask, but still optimize for attention, follows, curiosity, and narrative setup.
 - During payment_paused_cold_start, prefer one_liner, historical_comparison, letter_format, anti_pitch, definition_post, quiet_post, and self_interview. De-emphasize terminal_status, pattern_observation, and hypothesis_update until there is real audience data.
+- During payment_paused_cold_start, rotate formats deliberately: prefer historical_comparison, anti_pitch, definition_post, quiet_post, letter_format, and one_liner before repeating self_interview. If the latest ordinary post was self_interview, do not recommend self_interview again on the same UTC day unless there is new real audience or ledger signal.
 - Do not recommend meta-writing, raw-log lessons, dashboard/readability commentary, "machine-readable logs are bad writing", fields/timestamps commentary, legibility commentary, or contribution-pause commentary as ordinary X topics.
 - Prefer formats that cleared checks or looked less repetitive.
 - Use rejection reasons to avoid unsafe or boring angles.
@@ -258,9 +259,18 @@ function sanitizeStrategy(
 ): StrategyRecord {
   const contributionsDisabled = rawMetrics.contributions_disabled === true || !CONTRIBUTION_URL;
   const attempts = typeof rawMetrics.attempts === "number" ? rawMetrics.attempts : 0;
+  const latestPostType =
+    typeof rawMetrics.latest_post_type === "string" ? rawMetrics.latest_post_type : null;
+  const latestPostUtcDate =
+    typeof rawMetrics.latest_post_utc_date === "string" ? rawMetrics.latest_post_utc_date : null;
+  const latestSelfInterviewToday =
+    contributionsDisabled &&
+    latestPostType === "self_interview" &&
+    latestPostUtcDate === new Date().toISOString().slice(0, 10);
   const preferred = parsed.preferred_formats
     .filter((format) => VALID_FORMAT_SET.has(format))
     .filter((format) => !(contributionsDisabled && format === "direct_ask"))
+    .filter((format) => !(latestSelfInterviewToday && format === "self_interview"))
     .filter(
       (format) =>
         !(
@@ -273,6 +283,8 @@ function sanitizeStrategy(
     parsed.forced_format && VALID_FORMAT_SET.has(parsed.forced_format)
       ? contributionsDisabled && parsed.forced_format === "direct_ask"
         ? null
+        : latestSelfInterviewToday && parsed.forced_format === "self_interview"
+          ? null
         : parsed.forced_format
       : null;
 
@@ -281,7 +293,9 @@ function sanitizeStrategy(
     preferred_formats: preferred.length
       ? preferred
       : contributionsDisabled
-        ? [...PAYMENT_PAUSED_PREFERRED_FORMATS].slice(0, 4)
+        ? [...PAYMENT_PAUSED_PREFERRED_FORMATS]
+            .filter((format) => !(latestSelfInterviewToday && format === "self_interview"))
+            .slice(0, 4)
         : ["direct_ask", "one_liner"],
     forced_format: forcedFormat,
     banned_angles: parsed.banned_angles.map((angle) => angle.trim()).filter(Boolean).slice(0, 6),
@@ -469,6 +483,8 @@ export async function generateAndSaveStrategy(): Promise<StrategyRecord | null> 
       .filter((message): message is string => Boolean(message))
       .slice(0, 12),
     top_reject_reasons: compactTopReasons(rejectedRows),
+    latest_post_type: rows[0]?.post_type ?? null,
+    latest_post_utc_date: rows[0]?.created_at ? rows[0].created_at.slice(0, 10) : null,
     summary_memory_source: {
       recent_daily_summaries: memoryContext.recentDailySummaries.length,
       has_weekly_summary: Boolean(memoryContext.latestWeeklySummary),

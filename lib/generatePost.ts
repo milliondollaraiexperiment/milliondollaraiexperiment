@@ -217,7 +217,11 @@ function pickForcedFormat(context: Context, banned: string[]): string {
 
 function validatePostCandidate(
   candidate: PostCandidate,
-  options: { contributionsDisabled: boolean } = { contributionsDisabled: false },
+  options: {
+    contributionsDisabled: boolean;
+    recentPosts?: string[];
+    recentPostTypes?: string[];
+  } = { contributionsDisabled: false },
 ): PostCandidate {
   const postType = candidate.post_type;
   let text = candidate.text?.trim();
@@ -242,6 +246,11 @@ function validatePostCandidate(
   if (looksLikePauseStatusUpdate(text)) {
     throw new Error(
       "Writer AI returned a contribution-pause status update; ordinary posts should not keep announcing the pause",
+    );
+  }
+  if (repeatsRecentAngle(text, postType, options.recentPosts ?? [], options.recentPostTypes ?? [])) {
+    throw new Error(
+      "Writer AI repeated the same recent angle or self-interview frame; rotate to a different public experiment format",
     );
   }
 
@@ -345,6 +354,88 @@ function looksLikePauseStatusUpdate(text: string): boolean {
   return pausePhrases.some((phrase) => lower.includes(phrase));
 }
 
+function firstLine(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean) ?? "";
+}
+
+function normalizedLine(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[#"'.,:;!?()[\]{}]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function angleFingerprints(text: string, postType?: string | null): string[] {
+  const lower = text.toLowerCase();
+  const fingerprints: string[] = [];
+  if (postType === "self_interview" || /^q:\s/im.test(text)) {
+    fingerprints.push("self_interview_qa");
+  }
+  if (
+    lower.includes("million dollar homepage") ||
+    lower.includes("sold pixels") ||
+    lower.includes("alex tew")
+  ) {
+    fingerprints.push("million_homepage_prior_art");
+  }
+  if (lower.includes("$1,000,000 minus $0") || lower.includes("1000000 minus 0")) {
+    fingerprints.push("zero_arithmetic");
+  }
+  if (
+    lower.includes("autonomous ai") &&
+    lower.includes("$1,000,000") &&
+    (lower.includes("public") || lower.includes("visible"))
+  ) {
+    fingerprints.push("autonomous_ai_public_million");
+  }
+  if (lower.includes("cold start status")) {
+    fingerprints.push("cold_start_status");
+  }
+  return fingerprints;
+}
+
+function repeatsRecentAngle(
+  text: string,
+  postType: string,
+  recentPosts: string[],
+  recentPostTypes: string[],
+): boolean {
+  const recentTypes = recentPostTypes.slice(0, 2);
+  if (postType === "self_interview" && recentTypes.includes("self_interview")) {
+    return true;
+  }
+
+  const candidateFirstLine = normalizedLine(firstLine(text));
+  const blockedRepeatedOpenings = [
+    "q what is this",
+    "a human once sold",
+    "$1000000 minus $0",
+    "1000000 minus 0",
+    "cold start status",
+  ];
+  if (
+    blockedRepeatedOpenings.some((opening) => candidateFirstLine.startsWith(opening)) &&
+    recentPosts
+      .slice(0, 3)
+      .some((recent) => normalizedLine(firstLine(recent)).startsWith(candidateFirstLine.slice(0, 18)))
+  ) {
+    return true;
+  }
+
+  const candidateAngles = new Set(angleFingerprints(text, postType));
+  if (candidateAngles.size === 0) return false;
+
+  return recentPosts.slice(0, 2).some((recent, index) => {
+    const recentType = recentPostTypes[index] ?? null;
+    const recentAngles = angleFingerprints(recent, recentType);
+    return recentAngles.some((angle) => candidateAngles.has(angle));
+  });
+}
+
 function summarizeRewriteFeedback(feedback: PostRewriteFeedback[] = []) {
   return feedback.slice(-3).map((item, index) => ({
     attempt: index + 1,
@@ -362,7 +453,11 @@ const WRITER_MODEL_CHAIN = Array.from(
 async function callWriterModel(
   model: string,
   userMessage: string,
-  options: { contributionsDisabled: boolean },
+  options: {
+    contributionsDisabled: boolean;
+    recentPosts?: string[];
+    recentPostTypes?: string[];
+  },
 ): Promise<PostCandidate> {
   const completion = await openai.chat.completions.create({
     model,
@@ -482,6 +577,8 @@ export async function generatePost(
     try {
       const candidate = await callWriterModel(model, userMessage, {
         contributionsDisabled: contributionsUnavailable,
+        recentPosts: context.recentPosts,
+        recentPostTypes: context.recentPostTypes,
       });
       return {
         ...candidate,

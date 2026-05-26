@@ -21,7 +21,7 @@ function ageMs(iso: string | null | undefined) {
 async function latestDailyRun() {
   const { data, error } = await supabaseAdmin
     .from("daily_runs")
-    .select("id,et_date,day_number,status,started_at,completed_at,last_error,details")
+    .select("id,et_date,day_number,status,started_at,completed_at,last_error,details,updated_at")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -119,7 +119,18 @@ export async function GET(req: Request) {
     },
   });
   if (!dailyOk) {
-    failures.push(`no completed daily run for UTC date ${dailyWindow.etDate}`);
+    const latest = dailyRun.data;
+    if (latest?.et_date === dailyWindow.etDate && latest.status === "running") {
+      failures.push(`daily run stuck running since ${latest.started_at}`);
+    } else if (latest?.et_date === dailyWindow.etDate && latest.status === "failed") {
+      failures.push(
+        `latest daily run failed for UTC date ${dailyWindow.etDate}: ${
+          latest.last_error ?? "unknown error"
+        }`,
+      );
+    } else {
+      failures.push(`no completed daily run for UTC date ${dailyWindow.etDate}`);
+    }
   }
 
   const strategyOk = !dailyDue || Boolean(strategy?.id);

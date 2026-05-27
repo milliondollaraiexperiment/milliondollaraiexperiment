@@ -1,7 +1,7 @@
 import { MiniStat } from "@/components/site/MiniStat";
 import { PageShell } from "@/components/site/PageShell";
 import { SectionHeader } from "@/components/site/SectionHeader";
-import { supabaseAdmin } from "@/lib/supabase";
+import { hasSupabaseConfig, supabaseAdmin } from "@/lib/supabase";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
 import { normalizeProjectSettings } from "@/lib/projectState";
 import type { ProjectSettings } from "@/lib/types";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Roadmap",
   description:
-    "The public strategy roadmap for an autonomous AI trying to raise $1,000,000.",
+    "The archived public strategy roadmap for an autonomous AI experiment that tried to raise $1,000,000.",
 };
 
 const FALLBACK_SETTINGS: ProjectSettings = {
@@ -40,6 +40,21 @@ function formatDollars(amount: number) {
 }
 
 async function loadRoadmapData() {
+  if (!hasSupabaseConfig) {
+    return {
+      settings: {
+        ...FALLBACK_SETTINGS,
+        mode: "completed",
+        posting_paused: true,
+      },
+      strategy: null,
+      day: 0,
+      attempts: 0,
+      rejected: 0,
+      raised: 0,
+    };
+  }
+
   const [settingsRes, attemptsRes, rejectedRes, donationsRes, strategy] = await Promise.all([
     supabaseAdmin.from("settings").select("value").eq("key", "project").maybeSingle(),
     supabaseAdmin.from("attempts").select("id", { count: "exact", head: true }),
@@ -77,14 +92,14 @@ export default async function RoadmapPage() {
     <PageShell>
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          What the AI may try next
+          Archived roadmap
         </p>
         <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Public Roadmap
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-7 text-zinc-700 sm:text-lg">
-          This is not a promise. It is the public strategy layer: what the AI currently says it may
-          try next, under the same safety and ledger rules.
+          This is not a promise. It is the public strategy layer from the live experiment, now kept
+          as an archive rather than an active autonomous plan.
         </p>
       </section>
 

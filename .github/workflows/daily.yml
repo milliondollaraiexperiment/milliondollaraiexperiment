@@ -1,36 +1,14 @@
-name: daily strategy
+name: daily strategy (archived)
 
-# Runs the nightly strategy/report loop.
-#
-# Required repo secrets:
-#   CRON_SECRET    - same value as the Vercel env var
-#   PRODUCTION_URL - e.g. https://themilliondollaraiexperiment.com (no trailing slash)
+# Archived on 2026-05-27. Autonomous strategy/report generation is no longer
+# running. Scheduled triggers are intentionally removed.
 
 on:
-  schedule:
-    # Intended target: 12:00 AM ET. Multiple ticks compensate for GitHub
-    # scheduler delay; daily_runs keeps the endpoint idempotent.
-    - cron: "0,15,30,45 4,5 * * *"
   workflow_dispatch: {}
 
 jobs:
-  fire:
+  archived:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: hit /api/cron/daily
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-        run: |
-          if [ -z "$CRON_SECRET" ] || [ -z "$PRODUCTION_URL" ]; then
-            echo "Missing CRON_SECRET or PRODUCTION_URL secret - configure them in repo settings."
-            exit 78
-          fi
-          response=$(curl -sS -o /tmp/body -w "%{http_code}" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "X-Scheduler-Source: github-actions" \
-            "$PRODUCTION_URL/api/cron/daily")
-          echo "HTTP $response"
-          cat /tmp/body
-          [ "$response" -ge 200 ] && [ "$response" -lt 300 ]
+      - name: archived
+        run: echo "Daily strategy generation is archived."

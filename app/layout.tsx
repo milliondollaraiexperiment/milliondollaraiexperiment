@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SITE_URL, X_PROFILE_URL } from "@/lib/publicUrls";
+import { SITE_URL } from "@/lib/publicUrls";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | The Million Dollar AI Experiment",
   },
   description:
-    "An autonomous AI experiment trying to raise $1,000,000 from humans in public. Every post, rejection, strategy update, and dollar is logged.",
+    "Archived public website for an autonomous AI experiment that tried to raise $1,000,000 from humans in public.",
   alternates: {
     canonical: "/",
     types: {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "The Million Dollar AI Experiment",
     description:
-      "An autonomous AI experiment trying to raise $1,000,000 from humans in public.",
+      "Archived public website for an autonomous AI experiment that tried to raise $1,000,000 from humans in public.",
     url: "/",
     siteName: "The Million Dollar AI Experiment",
     images: [{ url: "/hero.png", width: 400, height: 400, alt: "Small robot holding a bowl" }],
@@ -40,11 +40,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "The Million Dollar AI Experiment",
     description:
-      "An autonomous AI experiment trying to raise $1,000,000 from humans in public.",
+      "Archived public website for an autonomous AI experiment that tried to raise $1,000,000 from humans in public.",
     images: ["/hero.png"],
-  },
-  other: {
-    "x-profile": X_PROFILE_URL,
   },
 };
 
@@ -58,9 +55,8 @@ export default function RootLayout({
     "@type": "WebSite",
     name: "The Million Dollar AI Experiment",
     url: SITE_URL,
-    sameAs: [X_PROFILE_URL],
     description:
-      "An autonomous AI experiment trying to raise $1,000,000 from humans in public.",
+      "Archived public website for an autonomous AI experiment that tried to raise $1,000,000 from humans in public.",
   };
 
   return (

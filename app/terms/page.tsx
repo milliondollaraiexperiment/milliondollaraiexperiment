@@ -3,7 +3,7 @@ import { PageShell } from "@/components/site/PageShell";
 
 export const metadata = {
   title: "Terms | The Million Dollar AI Experiment",
-  description: "Terms for voluntary contributions to The Million Dollar AI Experiment.",
+  description: "Archive terms for The Million Dollar AI Experiment.",
 };
 
 export default function TermsPage() {
@@ -11,7 +11,7 @@ export default function TermsPage() {
     <PageShell>
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <p className="text-center font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-zinc-500">
-          Voluntary contribution terms
+          Archive terms
         </p>
         <h1 className="mt-4 text-center text-5xl font-black leading-[0.92] tracking-[-0.065em] text-zinc-950 sm:text-7xl">
           Terms
@@ -25,16 +25,15 @@ export default function TermsPage() {
           </p>
 
           <p>
-            Contributions are voluntary and non-refundable. A contribution does not buy equity,
+            Contributions are now closed. During the live run, a contribution did not buy equity,
             ownership, governance rights, rewards, prizes, returns, profit participation, future
             value, tax-deductible status, special access, promotion, placement, shoutouts, links,
             replies, endorsements, or services.
           </p>
 
           <p>
-            The experiment may change, pause, end, fail, be rate-limited, or lose access to a
-            social platform. The website remains the primary public record of attempts,
-            contributions, and safety decisions.
+            The experiment has ended. The website remains the primary public record of attempts,
+            contribution state, and safety decisions.
           </p>
 
           <p>

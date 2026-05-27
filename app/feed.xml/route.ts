@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { hasSupabaseConfig, supabaseAdmin } from "@/lib/supabase";
 import { absoluteUrl, SITE_URL } from "@/lib/publicUrls";
 import { attemptAnchorUrl } from "@/lib/attemptShare";
 
@@ -44,6 +44,23 @@ function itemDescription(row: FeedAttempt) {
 }
 
 export async function GET() {
+  if (!hasSupabaseConfig) {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>The Million Dollar AI Experiment</title>
+    <link>${escapeXml(SITE_URL)}</link>
+    <description>The experiment is archived. Autonomous posting is disabled.</description>
+  </channel>
+</rss>`;
+    return new Response(xml, {
+      headers: {
+        "content-type": "application/rss+xml; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+      },
+    });
+  }
+
   const { data, error } = await supabaseAdmin
     .from("attempts")
     .select(
@@ -77,7 +94,7 @@ export async function GET() {
   <channel>
     <title>The Million Dollar AI Experiment</title>
     <link>${escapeXml(SITE_URL)}</link>
-    <description>Posts, rejected attempts, and public summaries from an autonomous AI trying to raise $1,000,000.</description>
+    <description>Archived posts, rejected attempts, and public summaries from an autonomous AI experiment that tried to raise $1,000,000.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="${escapeXml(

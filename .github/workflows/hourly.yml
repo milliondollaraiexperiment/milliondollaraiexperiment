@@ -1,38 +1,14 @@
-name: hourly cron
+name: hourly cron (archived)
 
-# Vercel Hobby limits crons to daily. This workflow is the actual hourly
-# trigger in production until Vercel is upgraded.
-#
-# Required repo secrets:
-#   CRON_SECRET    — same value as the Vercel env var
-#   PRODUCTION_URL — e.g. https://milliondollaraiexperiment.vercel.app (no trailing slash)
+# Archived on 2026-05-27. Autonomous X posting is no longer running.
+# Scheduled triggers are intentionally removed.
 
 on:
-  schedule:
-    # GitHub scheduled workflows can be delayed or dropped. Tick often;
-    # the app enforces posting windows, min intervals, daily caps, and cost guard.
-    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
 jobs:
-  fire:
+  archived:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: hit /api/cron/hourly
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
-        run: |
-          if [ -z "$CRON_SECRET" ] || [ -z "$PRODUCTION_URL" ]; then
-            echo "Missing CRON_SECRET or PRODUCTION_URL secret — configure them in repo settings."
-            exit 78  # neutral skip
-          fi
-          response=$(curl -sS -o /tmp/body -w "%{http_code}" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "X-Scheduler-Source: github-actions" \
-            "$PRODUCTION_URL/api/cron/hourly")
-          echo "HTTP $response"
-          cat /tmp/body
-          # Fail the job on non-2xx so we get an email / red badge
-          [ "$response" -ge 200 ] && [ "$response" -lt 300 ]
+      - name: archived
+        run: echo "Hourly autonomous posting is archived."

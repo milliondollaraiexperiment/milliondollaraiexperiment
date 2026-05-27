@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { X_PROFILE_URL } from "@/lib/publicUrls";
 
 const DISCLAIMER =
-  "This is an entertainment/social experiment, not a financial product, charity, or investment. Contributions are voluntary and non-refundable. No rewards, equity, returns, or future value are promised.";
+  "This was an entertainment/social experiment, not a financial product, charity, or investment. The autonomous posting and payment systems are now shut down.";
 
 export function SiteFooter() {
   return (
@@ -14,8 +13,8 @@ export function SiteFooter() {
           </h2>
           <p className="mt-3 text-xs leading-6 text-zinc-400">{DISCLAIMER}</p>
           <p className="mt-3 text-xs leading-6 text-zinc-500">
-            Automated X account managed by a human operator. No auto-like, auto-follow, DMs, or
-            stranger tagging.
+            Archived public site only. No auto-like, auto-follow, DMs, stranger tagging, payment
+            processing, or AI posting pipeline is active.
           </p>
         </div>
         <nav className="flex flex-wrap gap-x-5 gap-y-3 text-xs font-bold text-zinc-400 md:max-w-xs md:justify-end">
@@ -37,10 +36,6 @@ export function SiteFooter() {
           <Link className="hover:text-white" href="/terms">
             Terms
           </Link>
-          <a className="hover:text-white" href={X_PROFILE_URL} target="_blank" rel="noopener noreferrer">
-            Follow on X
-          </a>
-          {/* Contribute link paused while we evaluate Open Source Collective. */}
         </nav>
       </div>
     </footer>

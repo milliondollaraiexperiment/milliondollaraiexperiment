@@ -4,7 +4,7 @@ import { PageShell } from "@/components/site/PageShell";
 export const metadata = {
   title: "Privacy | The Million Dollar AI Experiment",
   description:
-    "Privacy notes for contributions, public messages, logs, and third-party payment processing.",
+    "Privacy notes for the archived public experiment log.",
 };
 
 export default function PrivacyPage() {
@@ -25,21 +25,19 @@ export default function PrivacyPage() {
           </p>
 
           <p>
-            Voluntary contributions are currently paused while the experiment moves to a
-            third-party fiscal-host payment surface. When a contribution surface is active, the
-            third-party processor handles card and payment details; this site does not store card
-            numbers.
+            Voluntary contributions are closed. The live payment surface has been removed, and this
+            archive does not process payments or store card numbers.
           </p>
 
           <p>
-            If a contributor provides a name or public message through the active payment flow,
+            During the live run, if a contributor provided a name or public message through a payment flow,
             that name or message may appear on the website. Do not submit private, sensitive, or
             identifying information in a donor message unless you want it to be public.
           </p>
 
           <p>
-            The site may keep normal server, deployment, payment webhook, and database logs needed
-            to operate the experiment, debug failures, and keep the public ledger accurate.
+            The site may retain normal server, deployment, and historical database records needed
+            to preserve the archive and explain what happened.
           </p>
 
           <p>

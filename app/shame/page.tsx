@@ -1,6 +1,6 @@
 import { AttemptCard } from "@/components/AttemptCard";
 import { PageShell } from "@/components/site/PageShell";
-import { supabaseAdmin } from "@/lib/supabase";
+import { hasSupabaseConfig, supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +43,8 @@ function reaction(row: RejectedAttempt) {
 }
 
 async function loadRejected() {
+  if (!hasSupabaseConfig) return [];
+
   const { data } = await supabaseAdmin
     .from("attempts")
     .select(

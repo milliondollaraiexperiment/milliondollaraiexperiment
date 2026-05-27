@@ -15,7 +15,7 @@ export function ProgressBar({ current, goal, className = "" }: Props) {
     }).format(n);
   const pctLabel =
     current <= 0
-      ? "awaiting first contribution"
+      ? "archived before first verified contribution"
       : pct < 0.01
         ? "first dollars recorded"
         : `${pct.toFixed(2)}% funded`;
@@ -36,7 +36,7 @@ export function ProgressBar({ current, goal, className = "" }: Props) {
         <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-500 sm:text-right">
           <span className="inline-flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-600 shadow-[0_0_0_6px_rgba(5,150,105,0.12),0_0_18px_rgba(5,150,105,0.26)]" />
-            live ledger
+            archived ledger
           </span>
           <p className="mt-1">{pctLabel}</p>
         </div>
@@ -45,7 +45,7 @@ export function ProgressBar({ current, goal, className = "" }: Props) {
       <div
         className="relative mt-4 h-4 w-full overflow-hidden rounded-full bg-zinc-950/[0.08] p-[3px] shadow-[inset_0_1px_2px_rgba(8,8,10,0.1),0_18px_45px_rgba(8,8,10,0.08)] sm:h-5 dark:bg-zinc-50/[0.12]"
         role="progressbar"
-        aria-label="Fundraising progress"
+        aria-label="Archived ledger progress"
         aria-valuemin={0}
         aria-valuemax={goal}
         aria-valuenow={current}

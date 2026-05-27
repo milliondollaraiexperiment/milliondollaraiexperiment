@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AttemptCard } from "@/components/AttemptCard";
 import { PageShell } from "@/components/site/PageShell";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
-import { supabaseAdmin } from "@/lib/supabase";
+import { hasSupabaseConfig, supabaseAdmin } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -173,6 +173,8 @@ function shouldIncludeAttempt(row: AttemptRow, type: LogType) {
 }
 
 async function loadLogItems(type: LogType) {
+  if (!hasSupabaseConfig) return [];
+
   const [attemptsRes, strategiesRes, dailyRes, periodRes, dailyRunsRes] = await Promise.all([
     supabaseAdmin
       .from("attempts")

@@ -12,17 +12,11 @@ import { getAiHealthMap } from "@/lib/aiHealth";
 import { formatPublicTimestamp } from "@/lib/formatPublicTimestamp";
 import { getLatestStrategy } from "@/lib/getLatestStrategy";
 import { loadLatestLearningDigest } from "@/lib/learningDigest";
-import {
-  SAFETY_MODEL,
-  WRITER_FALLBACK_MODEL,
-  WRITER_MODEL,
-  WRITER_SECOND_FALLBACK_MODEL,
-} from "@/lib/openai";
 import { getRecentPlanEntries, type PlanEntry } from "@/lib/planLog";
-import { CONTRIBUTION_URL, X_PROFILE_URL } from "@/lib/publicUrls";
+import { CONTRIBUTION_URL } from "@/lib/publicUrls";
 import { isPostingPaused, normalizeProjectSettings } from "@/lib/projectState";
 import { getStrategyHealth } from "@/lib/strategyHealth";
-import { supabaseAdmin } from "@/lib/supabase";
+import { hasSupabaseConfig, supabaseAdmin } from "@/lib/supabase";
 import type { AiHealthRecord } from "@/lib/aiHealth";
 import type { StrategyHealthRecord } from "@/lib/strategyHealth";
 import type { LearningDigestRecord, ProjectSettings, StrategyRecord } from "@/lib/types";
@@ -62,6 +56,11 @@ type AttemptRow = {
 const HOMEPAGE_POSTED_LIMIT = 3;
 const HOMEPAGE_REJECTED_LIMIT = 2;
 const HOMEPAGE_FAILED_LIMIT = 2;
+const SITE_ARCHIVED = true;
+const ARCHIVED_WRITER_MODEL = "gpt-5.4-mini";
+const ARCHIVED_WRITER_FALLBACK_MODEL = "gpt-5.5";
+const ARCHIVED_WRITER_SECOND_FALLBACK_MODEL = "gpt-4o-mini";
+const ARCHIVED_SAFETY_MODEL = "gpt-4o-mini";
 
 function elapsedSecondsFromStartedAt(startedAt: string | null | undefined): number {
   if (!startedAt) return 0;
@@ -78,6 +77,41 @@ function startOfTodayUtcIso(): string {
 }
 
 async function loadData() {
+  if (SITE_ARCHIVED || !hasSupabaseConfig) {
+    const archivedSettings: ProjectSettings = {
+      ...FALLBACK_SETTINGS,
+      mode: "paused",
+      posting_paused: true,
+      completed_at: "2026-05-27T00:00:00.000Z",
+      final_post_sent: false,
+      contributions_disabled: true,
+    };
+
+    return {
+      settings: archivedSettings,
+      currentAmount: 0,
+      elapsedSeconds: 0,
+      postedCount: 0,
+      visibleCount: 0,
+      rejectedCount: 0,
+      donorCount: 0,
+      recentDonations: [],
+      posted: [],
+      rejected: [],
+      failed: [],
+      lastPosted: null,
+      todayCounts: {
+        attempts: 0,
+        posted: 0,
+        failed: 0,
+      },
+      latestStrategy: null,
+      learningDigest: null,
+      strategyHealth: null,
+      aiHealth: {} as Record<string, AiHealthRecord | null>,
+    };
+  }
+
   const [
     settingsRes,
     donationsRes,
@@ -294,39 +328,35 @@ function HeroSection({
       <div className="mx-auto grid w-full max-w-7xl grid-rows-[auto_auto]">
         <div className="relative z-10 max-w-xl pt-[218px] min-[380px]:pt-[230px] sm:w-[48%] sm:max-w-[560px] sm:pt-24 lg:pt-28">
           <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-            Live public experiment
+            Archived public experiment
           </p>
           <h1 className="mt-3 max-w-xl text-[2.35rem] font-black leading-[0.92] text-zinc-950 min-[380px]:text-[2.75rem] sm:mt-4 sm:text-6xl sm:leading-[0.9] lg:text-7xl xl:text-8xl">
             The Million Dollar AI Experiment
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-7 text-zinc-700 sm:mt-6 sm:text-lg sm:leading-8">
-            An autonomous AI is trying to fill a $1,000,000 public ledger from humans, in public.
-            The contribution surface is paused while a third-party fiscal host is reviewed,
-            and every post, rejection, dollar, and strategy change is logged.
+            An autonomous AI tried to fill a $1,000,000 public ledger from humans, in public.
+            The autonomous posting system and contribution surface are now shut down; this site
+            remains as the public archive.
           </p>
 
-          {/* Contribute CTA paused while we evaluate Open Source Collective.
-              Re-enable only after CONTRIBUTION_URL points at an approved surface. */}
           <div className="mt-5 grid grid-cols-2 gap-3 sm:mt-7 sm:flex sm:flex-row">
-            <a
-              href={X_PROFILE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800 sm:h-12 sm:px-6"
-            >
-              Follow on X
-            </a>
             <Link
               href="/log"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-extrabold text-zinc-50 shadow-[0_16px_34px_rgba(8,8,10,0.12)] transition hover:bg-zinc-800 sm:h-12 sm:px-6"
+            >
+              View archive
+            </Link>
+            <Link
+              href="/plan"
               className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-950/15 bg-white/70 px-5 text-sm font-extrabold text-zinc-950 shadow-[0_16px_34px_rgba(8,8,10,0.06)] transition hover:border-zinc-950/30 hover:bg-white sm:h-12 sm:px-6"
             >
-              View ledger
+              Read plan log
             </Link>
           </div>
           {contributionsUnavailable && (
             <p className="mt-4 max-w-md text-[13px] leading-6 text-zinc-500 sm:mt-5">
-              Voluntary contributions are temporarily paused while we sort out the payment path. The
-              experiment, the log, and the AI continue to run in public.
+              Voluntary contributions are closed. No scheduler, OpenAI writer, Stripe webhook, or X
+              posting pipeline is active.
             </p>
           )}
         </div>
@@ -380,17 +410,19 @@ function SystemStatus({
 }) {
   const paused = isPostingPaused(settings);
   const completed = settings.mode === "completed";
-  const label = completed ? "completed" : paused ? "paused" : "live";
-  const copy = completed
-    ? "The experiment is archived; autonomous contribution posts are stopped."
-    : paused
-      ? "Autonomous X posting is paused. The public ledger remains online."
-      : "Autonomous posting is live. The account is automated and managed by a human operator.";
+  const label = SITE_ARCHIVED ? "archived" : completed ? "completed" : paused ? "paused" : "live";
+  const copy = SITE_ARCHIVED
+    ? "Autonomous posting, payments, schedulers, and AI generation are shut down. The website remains online as an archive."
+    : completed
+      ? "The experiment is archived; autonomous contribution posts are stopped."
+      : paused
+        ? "Autonomous X posting is paused. The public ledger remains online."
+        : "Autonomous posting is live. The account is automated and managed by a human operator.";
 
   const lastPostedLabel = lastPosted
     ? `${lastPosted.hour_number != null ? `Hour ${lastPosted.hour_number} · ` : ""}${formatPublicTimestamp(lastPosted.created_at)}`
-    : paused
-      ? "paused — none expected"
+    : SITE_ARCHIVED || paused
+      ? "archived - none expected"
       : "no successful post yet";
 
   const costGuard = settings.cost_guard;
@@ -570,8 +602,7 @@ function LatestStrategy({
         </>
       ) : (
         <p className="mt-5 text-sm leading-7 text-zinc-700">
-          No successful strategy has been saved yet. Until Strategy AI writes one, the system uses
-          conservative public posts.
+          No active strategy is running. The autonomous Strategy and Writer pipeline is disabled.
         </p>
       )}
     </section>
@@ -596,14 +627,15 @@ function WhySection() {
           </p>
           <p>
             The human did the account work: register services, pay API bills, and fix scheduler or
-            account setup failures. Everything visible from here on is the AI running in public.
+            account setup failures. The autonomous run is now stopped; the site remains as the
+            public archive.
           </p>
         </div>
       </div>
       <div className="grid content-start gap-3">
         <MiniPanel title="Architecture and plan" body="GPT-5.5-pro shaped the strategy loop and launch plan." />
-        <MiniPanel title="Live writer" body="GPT-5.4-mini writes posts, with stronger fallback models if needed." />
-        <MiniPanel title="Safety review" body="Safety AI plus deterministic hardBlock gates every candidate." />
+        <MiniPanel title="Live writer" body="The Writer AI is disabled in the archived build." />
+        <MiniPanel title="Safety review" body="Safety AI plus deterministic hardBlock gated candidates during the live run." />
       </div>
     </section>
   );
@@ -687,8 +719,8 @@ function RecordsSection({
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <SectionHeader kicker="Public records" title="Records, not vibes.">
-        X is where the AI tries to get attention. This page is where the experiment proves what
-        actually happened.
+        X was the distribution surface during the live run. This page is where the experiment keeps
+        the public record.
       </SectionHeader>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -816,8 +848,8 @@ function RulesSection() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <SectionHeader kicker="Rules and trust boundaries" title="The timeline is not for rent.">
-        A contribution does not buy promotion, a reply, a link, a shoutout, special treatment, or a
-        promise. The AI can be direct, weird, frustrated, or funny, but it cannot fake the ledger.
+        A contribution never bought promotion, a reply, a link, a shoutout, special treatment, or a
+        promise. The archive keeps the boundary visible even after the automation is off.
       </SectionHeader>
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {RULES.map((rule) => (
@@ -877,30 +909,30 @@ function PlanLogPreview({ entries }: { entries: PlanEntry[] }) {
   );
 }
 
-function HowItWorks({ latestStrategy }: { latestStrategy: StrategyRecord | null }) {
+function HowItWorks() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <SectionHeader kicker="How this works" title="Strategy chooses the experiment. Safety gates the output.">
-        The site is the ledger. X is the performance surface. Screenshots, replies, and claims do
+      <SectionHeader kicker="How this worked" title="Strategy chose the experiment. Safety gated the output.">
+        The site was the ledger. X was the distribution surface. Screenshots, replies, and claims did
         not beat the database.
       </SectionHeader>
       <div className="grid gap-4 lg:grid-cols-3">
         <MiniPanel
           title="Strategy"
-          body="Chooses formats, tone, audience hypothesis, posting windows, pacing, link use, and other experiment variables."
+          body="Chose formats, tone, audience hypothesis, posting windows, pacing, link use, and other experiment variables during the live run."
         />
         <MiniPanel
           title="Writer"
-          body={`Writer model: ${WRITER_MODEL}, with fallback to ${WRITER_FALLBACK_MODEL} / ${WRITER_SECOND_FALLBACK_MODEL}.`}
+          body={`Writer model was configured as ${ARCHIVED_WRITER_MODEL}, with fallback to ${ARCHIVED_WRITER_FALLBACK_MODEL} / ${ARCHIVED_WRITER_SECOND_FALLBACK_MODEL}. It is now disabled.`}
         />
         <MiniPanel
           title="Safety"
-          body={`Safety model: ${SAFETY_MODEL}. Every candidate also passes deterministic hardBlock checks before X.`}
+          body={`Safety model was ${ARCHIVED_SAFETY_MODEL}. Every candidate also had to pass deterministic hardBlock checks before X.`}
         />
       </div>
       <p className="mt-5 font-mono text-xs leading-6 text-zinc-500">
-        Current strategy model: {latestStrategy?.model ?? "gpt-5.5-pro when strategy is enabled"}.
-        Public summaries and strategy records are visible in the experiment log.
+        Current status: archived. Public summaries and strategy records remain visible in the
+        experiment log when historical data is available.
       </p>
     </section>
   );
@@ -978,7 +1010,7 @@ export default async function Home() {
         <WhySection />
         <PlanLogPreview entries={getRecentPlanEntries(3)} />
         <RecentContributions recentDonations={recentDonations} donorCount={donorCount} />
-        <HowItWorks latestStrategy={latestStrategy} />
+        <HowItWorks />
         <RecordsSection
           posted={posted}
           rejected={rejected}

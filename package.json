@@ -10,14 +10,14 @@
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
-    "@supabase/supabase-js": "^2.106.1",
-    "next": "16.2.6",
+    "@react-three/fiber": "^9.7.0",
+    "@supabase/supabase-js": "^2.111.0",
+    "next": "16.2.12",
     "openai": "^6.39.0",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "stripe": "^22.1.1",
-    "three": "^0.184.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "stripe": "^22.4.0",
+    "three": "^0.185.1",
     "twitter-api-v2": "^1.29.0"
   },
   "devDependencies": {
@@ -25,9 +25,9 @@
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/three": "^0.184.1",
+    "@types/three": "^0.185.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
     "typescript": "^6"
   }
